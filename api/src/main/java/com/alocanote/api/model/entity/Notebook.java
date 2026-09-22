@@ -1,4 +1,4 @@
-package com.alocanote.api.model;
+package com.alocanote.api.model.entity;
 
 import com.alocanote.api.model.enums.NotebookStatus;
 import jakarta.persistence.*;
