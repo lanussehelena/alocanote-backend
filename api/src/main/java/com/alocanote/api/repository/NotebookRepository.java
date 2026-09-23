@@ -1,7 +1,7 @@
 package com.alocanote.api.repository;
-
-import com.alocanote.api.model.Notebook;
 import com.alocanote.api.model.enums.NotebookStatus;
+
+import com.alocanote.api.model.entity.Notebook;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
