@@ -1,15 +1,15 @@
 server:
-  port: 8080
+  port: 8082
 
 spring:
   application:
     name: api
 
   datasource:
-    url: jdbc:h2:mem:alocanotedb
+    url: jdbc:h2:mem:alocanotedb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
-    password: '123'
+    password: ''
 
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
@@ -17,6 +17,7 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  # O h2 deve estar exatamente com 2 espaços de recuo (alinhado com datasource e jpa)
   h2:
     console:
       enabled: true
