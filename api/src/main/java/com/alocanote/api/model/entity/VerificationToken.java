@@ -6,6 +6,8 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+@Entity
+@Table (name = "tb_verification_token")
 
 public class VerificationToken {
     private static final int EXPIRATION_MINUTES = 15;
