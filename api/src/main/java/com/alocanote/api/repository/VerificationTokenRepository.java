@@ -10,9 +10,9 @@ import java.util.Optional;
 @Repository
 public interface VerificationTokenRepository extends JpaRepository<VerificationToken, Long> {
 
-    // Busca o token exato introduzido na aplicação
+    // Busca o token pelo código de verificação enviado
     Optional<VerificationToken> findByToken(String token);
 
-    // Verifica se já existe um token pendente para  colaborador
+    // Busca o token associado a uma utilizadora específica
     Optional<VerificationToken> findByUser(User user);
 }
