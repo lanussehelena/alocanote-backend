@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="DataSourcePerFileMappings">
-    <file url="file://$PROJECT_DIR$/api/src/main/resources/db/migration/V1__criar_tabelas_iniciais.sql" value="b3537984-5dcb-42fb-9929-1015daa68e7a" />
-    <file url="file://$PROJECT_DIR$/api/src/main/resources/db/migration/V2__adicionar_notebook_na_reserva.sql" value="b3537984-5dcb-42fb-9929-1015daa68e7a" />
-  </component>
-</project>
