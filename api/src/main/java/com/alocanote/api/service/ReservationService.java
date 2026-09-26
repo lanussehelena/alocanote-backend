@@ -42,11 +42,11 @@ public class ReservationService {
         // Regra 2: Bloqueio duplo para garantir que não há um agendamento prévio na base de dados
         List<Reservation> activeReservations = reservationRepository.findByNotebookIdAndStatus(notebookId, ReservationStatus.AGENDADO);
         if (!activeReservations.isEmpty()) {
-            throw new BusinessException("Conflito: Este notebook já foi reservado por outra colaboradora.");
+            throw new BusinessException("Conflito: Este notebook já foi reservado para este período.");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Colaboradora não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuária não encontrada."));
 
         Reservation reservation = Reservation.builder()
                 .notebook(notebook)
