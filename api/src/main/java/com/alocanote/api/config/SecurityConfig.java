@@ -1,6 +1,7 @@
 package com.alocanote.api.config;
 
 import com.alocanote.api.security.SecurityFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,13 +18,13 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
     private final CorsConfigurationSource corsConfigurationSource;
-
 
     public SecurityConfig(SecurityFilter securityFilter, CorsConfigurationSource corsConfigurationSource) {
         this.securityFilter = securityFilter;
@@ -52,6 +53,13 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         // Todos os outros endpoints exigem autenticação via token JWT
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"Token JWT ausente ou inválido\"}");
+                        })
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
 
