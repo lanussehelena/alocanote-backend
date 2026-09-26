@@ -22,3 +22,9 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
+api:
+  security:
+    token:
+      secret: ${JWT_SECRET:alocanote-secret-key-default-change-in-production-2026}
+      expiration: 86400000

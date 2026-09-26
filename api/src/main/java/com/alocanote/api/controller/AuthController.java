@@ -1,56 +1,45 @@
 package com.alocanote.api.controller;
 
 import com.alocanote.api.dto.request.LoginRequestDTO;
-import com.alocanote.api.dto.request.RegisterUserRequestDTO;
-import com.alocanote.api.dto.request.TokenValidationRequestDTO;
-import com.alocanote.api.dto.response.AuthResponseDTO;
+import com.alocanote.api.dto.response.LoginResponseDTO;
+import com.alocanote.api.exception.BusinessException;
 import com.alocanote.api.model.entity.User;
-import com.alocanote.api.service.AuthService;
-import com.alocanote.api.service.UserService;
+import com.alocanote.api.repository.UserRepository;
+import com.alocanote.api.security.JwtTokenProvider;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final UserService userService;
-    private final AuthService authService;
+    private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public AuthController(UserService userService, AuthService authService) {
-        this.userService = userService;
-        this.authService = authService;
-    }
-
-    @PostMapping("/register")
-    public ResponseEntity register(@Valid @RequestBody RegisterUserRequestDTO dto) {
-        User newUser = userService.createUser(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
+    public AuthController(UserRepository userRepository, JwtTokenProvider jwtTokenProvider) {
+        this.userRepository = userRepository;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @PostMapping("/login")
-    public ResponseEntity login(@Valid @RequestBody LoginRequestDTO dto) {
-        // Implementação básica de exemplo para retorno de autenticação
-        User user = userService.findByEmailOrUsername(dto.getEmail());
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BusinessException("E-mail ou senha inválidos."));
 
-        // Dispara o envio do token SMS para validação em duas etapas
-        authService.generateAndSendToken(user.getId());
+        String token = jwtTokenProvider.generateToken(user);
 
-        AuthResponseDTO response = new AuthResponseDTO(
-                "MOCK_JWT_TOKEN_123456",
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getRole()
-        );
+        LoginResponseDTO response = LoginResponseDTO.builder()
+                .token(token)
+                .type("Bearer")
+                .email(user.getEmail())
+                .name(user.getName())
+                .role(user.getAccessLevel())
+                .build();
+
         return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/verify-sms")
-    public ResponseEntity verifySms(@Valid @RequestBody TokenValidationRequestDTO dto) {
-        authService.verifyToken(dto.code());
-        return ResponseEntity.ok().build();
     }
 }
