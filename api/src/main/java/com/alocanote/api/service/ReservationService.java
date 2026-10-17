@@ -37,7 +37,7 @@ public class ReservationService {
 
     @Transactional
     public Reservation createReservation(CreateReservationRequestDTO dto, String userEmail) {
-        if (dto.endTime().isBefore(dto.startTime())) {
+        if (!dto.endTime().isAfter(dto.startTime())) {
             throw new BusinessException("A data de término deve ser posterior à data de início.");
         }
 
@@ -47,11 +47,13 @@ public class ReservationService {
             throw new BusinessException("Este notebook está em manutenção e não pode ser reservado.");
         }
 
+        List<ReservationStatus> activeStatuses = List.of(ReservationStatus.AGENDADO, ReservationStatus.CHECKED_IN);
+
         List<Reservation> conflitos = reservationRepository.findConflictingReservations(
                 dto.notebookId(),
                 dto.startTime(),
                 dto.endTime(),
-                ReservationStatus.AGENDADO
+                activeStatuses
         );
 
         if (!conflitos.isEmpty()) {
@@ -126,6 +128,24 @@ public class ReservationService {
         }
 
         reservation.setStatus(ReservationStatus.CANCELADO);
+        notebookService.updateStatus(reservation.getNotebook().getId(), NotebookStatus.DISPONIVEL);
+
+        return reservationRepository.save(reservation);
+    }
+
+    // Realiza a finalização/devolução da reserva e libera o equipamento
+    @Transactional
+    public Reservation finishReservation(Long reservationId, String userEmail) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva não encontrada com o ID: " + reservationId));
+
+        validarPosseReserva(reservation, userEmail);
+
+        if (reservation.getStatus() != ReservationStatus.CHECKED_IN) {
+            throw new BusinessException("Só é possível finalizar reservas que estejam em andamento (CHECKED_IN).");
+        }
+
+        reservation.setStatus(ReservationStatus.FINALIZADO);
         notebookService.updateStatus(reservation.getNotebook().getId(), NotebookStatus.DISPONIVEL);
 
         return reservationRepository.save(reservation);
