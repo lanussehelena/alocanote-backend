@@ -1,7 +1,7 @@
 package com.alocanote.api.controller;
 
 import com.alocanote.api.dto.request.RegisterUserRequestDTO;
-import com.alocanote.api.model.entity.User;
+import com.alocanote.api.dto.response.UserResponseDTO;
 import com.alocanote.api.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,14 +21,14 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<User> register(@Valid @RequestBody RegisterUserRequestDTO requestDTO) {
-        User newUser = userService.createUser(requestDTO);
+    public ResponseEntity<UserResponseDTO> register(@Valid @RequestBody RegisterUserRequestDTO requestDTO) {
+        UserResponseDTO newUser = userService.register(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
     }
 
     @GetMapping
-    public ResponseEntity<List<User>> listarTodos() {
-        List<User> users = userService.findAll();
+    public ResponseEntity<List<UserResponseDTO>> listarTodos() {
+        List<UserResponseDTO> users = userService.findAllDTOs();
         return ResponseEntity.ok(users);
     }
 }

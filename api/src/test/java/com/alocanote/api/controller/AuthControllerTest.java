@@ -37,9 +37,7 @@ class AuthControllerTest {
     @DisplayName("Deve realizar login com sucesso e retornar token JWT")
     void shouldLoginSuccessfully() {
         String email = "maria@alocanote.com";
-        LoginRequestDTO request = new LoginRequestDTO();
-        request.setEmail(email);
-        request.setPassword("123456");
+        LoginRequestDTO request = new LoginRequestDTO(email, "123456");
 
         User user = User.builder()
                 .id(1L)
@@ -56,18 +54,16 @@ class AuthControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("jwt.token.mock", response.getBody().getToken());
-        assertEquals("Bearer", response.getBody().getType());
-        assertEquals(email, response.getBody().getEmail());
+        assertEquals("jwt.token.mock", response.getBody().token());
+        assertEquals("Bearer", response.getBody().type());
+        assertEquals(email, response.getBody().email());
     }
 
     @Test
     @DisplayName("Deve lançar BusinessException quando o e-mail não existir")
     void shouldThrowExceptionWhenUserNotFound() {
         String email = "naoexiste@alocanote.com";
-        LoginRequestDTO request = new LoginRequestDTO();
-        request.setEmail(email);
-        request.setPassword("123456");
+        LoginRequestDTO request = new LoginRequestDTO(email, "123456");
 
         when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 

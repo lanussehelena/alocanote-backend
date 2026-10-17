@@ -1,44 +1,68 @@
 package com.alocanote.api.service;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import com.alocanote.api.dto.request.RegisterUserRequestDTO;
-import com.alocanote.api.model.entity.User;
-import com.alocanote.api.repository.UserRepository;
+import com.alocanote.api.dto.response.UserResponseDTO;
 import com.alocanote.api.exception.BusinessException;
 import com.alocanote.api.exception.ResourceNotFoundException;
-import lombok.RequiredArgsConstructor;
+import com.alocanote.api.model.entity.User;
+import com.alocanote.api.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder; // Injetado automaticamente pelo Lombok
+    private final PasswordEncoder passwordEncoder;
+
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Transactional
-    public User createUser(RegisterUserRequestDTO dto) {
-        // Validação de Unicidade de Email
-        if (userRepository.existsByEmail(dto.getEmail())) {
+    public UserResponseDTO register(RegisterUserRequestDTO dto) {
+        if (userRepository.existsByEmail(dto.email())) {
             throw new BusinessException("Já existe um usuário cadastrado com este e-mail.");
         }
 
-        // Validação de Unicidade de Telefone
-        if (userRepository.existsByPhone(dto.getPhone())) {
+        if (userRepository.existsByPhone(dto.phone())) {
             throw new BusinessException("Já existe um usuário cadastrado com este telefone.");
         }
 
-        // Transforma o DTO na Entidade User usando o Builder
         User user = User.builder()
-                .name(dto.getName())
-                .email(dto.getEmail())
-                .phone(dto.getPhone())
-                .role(dto.getRole())
-                .customRole(dto.getCustomRole())
-                .password(passwordEncoder.encode(dto.getPassword()))
+                .name(dto.name())
+                .email(dto.email())
+                .phone(dto.phone())
+                .role(dto.role())
+                .customRole(dto.customRole())
+                .password(passwordEncoder.encode(dto.password()))
+                .build();
+
+        User saved = userRepository.save(user);
+        return UserResponseDTO.fromEntity(saved);
+    }
+
+    @Transactional
+    public User createUser(RegisterUserRequestDTO dto) {
+        if (userRepository.existsByEmail(dto.email())) {
+            throw new BusinessException("Já existe um usuário cadastrado com este e-mail.");
+        }
+
+        if (userRepository.existsByPhone(dto.phone())) {
+            throw new BusinessException("Já existe um usuário cadastrado com este telefone.");
+        }
+
+        User user = User.builder()
+                .name(dto.name())
+                .email(dto.email())
+                .phone(dto.phone())
+                .role(dto.role())
+                .customRole(dto.customRole())
+                .password(passwordEncoder.encode(dto.password()))
                 .build();
 
         return userRepository.save(user);
@@ -48,6 +72,18 @@ public class UserService {
     public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com o ID: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponseDTO findDtoById(Long id) {
+        return UserResponseDTO.fromEntity(findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> findAllDTOs() {
+        return userRepository.findAll().stream()
+                .map(UserResponseDTO::fromEntity)
+                .toList();
     }
 
     @Transactional(readOnly = true)
