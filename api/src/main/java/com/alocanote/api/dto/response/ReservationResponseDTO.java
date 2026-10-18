@@ -17,8 +17,39 @@ public record ReservationResponseDTO(
         Long locationId,
         String locationName,
         ReservationStatus status,
-        String purpose
+        String purpose,
+        String checkInLocationType,
+        String checkInAddress,
+        Double checkInLatitude,
+        Double checkInLongitude,
+        LocalDateTime checkInAt,
+        String returnLocationType,
+        String returnAddress,
+        Double returnLatitude,
+        Double returnLongitude,
+        String returnPhotoUrl,
+        LocalDateTime returnedAt
 ) {
+    public ReservationResponseDTO(
+            Long id,
+            Long userId,
+            String userName,
+            Long notebookId,
+            String notebookName,
+            String notebookModel,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            Long locationId,
+            String locationName,
+            ReservationStatus status,
+            String purpose
+    ) {
+        this(id, userId, userName, notebookId, notebookName, notebookModel, startTime, endTime,
+                locationId, locationName, status, purpose,
+                null, null, null, null, null,
+                null, null, null, null, null, null);
+    }
+
     public static ReservationResponseDTO fromEntity(Reservation reservation) {
         if (reservation == null) return null;
         return new ReservationResponseDTO(
@@ -33,7 +64,18 @@ public record ReservationResponseDTO(
                 reservation.getLocation() != null ? reservation.getLocation().getId() : null,
                 reservation.getLocation() != null ? reservation.getLocation().getName() : null,
                 reservation.getStatus(),
-                reservation.getPurpose()
+                reservation.getPurpose(),
+                reservation.getCheckInLocationType(),
+                reservation.getCheckInAddress(),
+                reservation.getCheckInLatitude(),
+                reservation.getCheckInLongitude(),
+                reservation.getCheckInAt(),
+                reservation.getReturnLocationType(),
+                reservation.getReturnAddress(),
+                reservation.getReturnLatitude(),
+                reservation.getReturnLongitude(),
+                reservation.getReturnPhotoUrl(),
+                reservation.getReturnedAt()
         );
     }
 }

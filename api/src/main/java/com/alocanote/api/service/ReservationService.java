@@ -1,6 +1,8 @@
 package com.alocanote.api.service;
 
+import com.alocanote.api.dto.request.CheckInReservationRequestDTO;
 import com.alocanote.api.dto.request.CreateReservationRequestDTO;
+import com.alocanote.api.dto.request.FinishReservationRequestDTO;
 import com.alocanote.api.exception.BusinessException;
 import com.alocanote.api.exception.ResourceNotFoundException;
 import com.alocanote.api.model.entity.Location;
@@ -66,8 +68,11 @@ public class ReservationService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado."));
 
-        Location location = locationRepository.findById(dto.locationId())
-                .orElseThrow(() -> new ResourceNotFoundException("Local de retirada não encontrado com o ID: " + dto.locationId()));
+        Location location = null;
+        if (dto.locationId() != null) {
+            location = locationRepository.findById(dto.locationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Local de retirada não encontrado com o ID: " + dto.locationId()));
+        }
 
         Reservation reservation = Reservation.builder()
                 .notebook(notebook)
@@ -122,6 +127,11 @@ public class ReservationService {
     // Realiza o Check-in (atualiza status para CHECKED_IN)
     @Transactional
     public Reservation checkIn(Long reservationId, String userEmail) {
+        return checkIn(reservationId, userEmail, null);
+    }
+
+    @Transactional
+    public Reservation checkIn(Long reservationId, String userEmail, CheckInReservationRequestDTO dto) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva não encontrada com o ID: " + reservationId));
 
@@ -130,6 +140,22 @@ public class ReservationService {
         if (reservation.getStatus() != ReservationStatus.AGENDADO) {
             throw new BusinessException("Só é possível fazer check-in de reservas com status AGENDADO.");
         }
+
+        if (dto != null) {
+            if (dto.locationType() != null && !dto.locationType().isBlank()) {
+                reservation.setCheckInLocationType(dto.locationType().trim());
+            }
+            if (dto.address() != null && !dto.address().isBlank()) {
+                reservation.setCheckInAddress(dto.address().trim());
+            }
+            if (dto.latitude() != null) {
+                reservation.setCheckInLatitude(dto.latitude());
+            }
+            if (dto.longitude() != null) {
+                reservation.setCheckInLongitude(dto.longitude());
+            }
+        }
+        reservation.setCheckInAt(LocalDateTime.now());
 
         reservation.setStatus(ReservationStatus.CHECKED_IN);
         notebookService.updateStatus(reservation.getNotebook().getId(), NotebookStatus.EM_USO);
@@ -158,6 +184,11 @@ public class ReservationService {
     // Realiza a finalização/devolução da reserva e libera o equipamento
     @Transactional
     public Reservation finishReservation(Long reservationId, String userEmail) {
+        return finishReservation(reservationId, userEmail, null);
+    }
+
+    @Transactional
+    public Reservation finishReservation(Long reservationId, String userEmail, FinishReservationRequestDTO dto) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva não encontrada com o ID: " + reservationId));
 
@@ -166,6 +197,25 @@ public class ReservationService {
         if (reservation.getStatus() != ReservationStatus.CHECKED_IN) {
             throw new BusinessException("Só é possível finalizar reservas que estejam em andamento (CHECKED_IN).");
         }
+
+        if (dto != null) {
+            if (dto.locationType() != null && !dto.locationType().isBlank()) {
+                reservation.setReturnLocationType(dto.locationType().trim());
+            }
+            if (dto.address() != null && !dto.address().isBlank()) {
+                reservation.setReturnAddress(dto.address().trim());
+            }
+            if (dto.latitude() != null) {
+                reservation.setReturnLatitude(dto.latitude());
+            }
+            if (dto.longitude() != null) {
+                reservation.setReturnLongitude(dto.longitude());
+            }
+            if (dto.photoUrl() != null && !dto.photoUrl().isBlank()) {
+                reservation.setReturnPhotoUrl(dto.photoUrl().trim());
+            }
+        }
+        reservation.setReturnedAt(LocalDateTime.now());
 
         reservation.setStatus(ReservationStatus.FINALIZADO);
         notebookService.updateStatus(reservation.getNotebook().getId(), NotebookStatus.DISPONIVEL);

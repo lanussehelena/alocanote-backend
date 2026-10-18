@@ -18,7 +18,6 @@ public record CreateReservationRequestDTO(
         @Future(message = "A data de devolução deve ser no futuro.")
         LocalDateTime endTime,
 
-        @NotNull(message = "O ID do local de retirada é obrigatório.")
         Long locationId,
 
         String purpose
