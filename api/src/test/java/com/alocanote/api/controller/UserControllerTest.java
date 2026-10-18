@@ -1,6 +1,7 @@
 package com.alocanote.api.controller;
 
 import com.alocanote.api.dto.request.RegisterUserRequestDTO;
+import com.alocanote.api.dto.request.UpdateUserProfileRequestDTO;
 import com.alocanote.api.dto.response.UserResponseDTO;
 import com.alocanote.api.model.enums.Role;
 import com.alocanote.api.service.UserService;
@@ -12,8 +13,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,6 +31,8 @@ class UserControllerTest {
 
     @InjectMocks
     private UserController userController;
+
+    private final UserDetails userDetails = new User("helena@alocanote.com", "password", Collections.emptyList());
 
     @Test
     @DisplayName("Deve cadastrar novo usuário retornando UserResponseDTO com HTTP 201")
@@ -66,5 +72,51 @@ class UserControllerTest {
         assertNotNull(response.getBody());
         assertEquals(2, response.getBody().size());
         assertEquals("Ana", response.getBody().get(0).name());
+    }
+
+    @Test
+    @DisplayName("Deve retornar o perfil do usuário autenticado via GET /users/me")
+    void shouldGetCurrentUserProfile() {
+        UserResponseDTO profileDto = new UserResponseDTO(
+                1L, "Helena", "helena@alocanote.com", "5511999999999",
+                Role.PROJETISTA, null, "ROLE_USER", "https://avatar.url/helena.png",
+                null, null, null, null, null, null, LocalDateTime.now()
+        );
+
+        when(userService.getCurrentUser("helena@alocanote.com")).thenReturn(profileDto);
+
+        ResponseEntity<UserResponseDTO> response = userController.obterMeuPerfil(userDetails);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Helena", response.getBody().name());
+        assertEquals("https://avatar.url/helena.png", response.getBody().profilePictureUrl());
+        verify(userService).getCurrentUser("helena@alocanote.com");
+    }
+
+    @Test
+    @DisplayName("Deve atualizar o perfil do usuário autenticado via PUT /users/me")
+    void shouldUpdateCurrentUserProfile() {
+        UpdateUserProfileRequestDTO updateRequest = new UpdateUserProfileRequestDTO(
+                "Helena Atualizada", "5511988887777", "https://avatar.url/novo.png",
+                null, "Rua A", "100", "Centro", "João Pessoa", "PB", "58000-000"
+        );
+
+        UserResponseDTO updatedDto = new UserResponseDTO(
+                1L, "Helena Atualizada", "helena@alocanote.com", "5511988887777",
+                Role.PROJETISTA, null, "ROLE_USER", "https://avatar.url/novo.png",
+                "Rua A", "100", "Centro", "João Pessoa", "PB", "58000-000", LocalDateTime.now()
+        );
+
+        when(userService.updateCurrentUser("helena@alocanote.com", updateRequest)).thenReturn(updatedDto);
+
+        ResponseEntity<UserResponseDTO> response = userController.atualizarMeuPerfil(updateRequest, userDetails);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Helena Atualizada", response.getBody().name());
+        assertEquals("5511988887777", response.getBody().phone());
+        assertEquals("https://avatar.url/novo.png", response.getBody().profilePictureUrl());
+        verify(userService).updateCurrentUser("helena@alocanote.com", updateRequest);
     }
 }

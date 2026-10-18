@@ -363,4 +363,39 @@ class ReservationServiceTest {
         assertEquals("Só é possível finalizar reservas que estejam em andamento (CHECKED_IN).", ex.getMessage());
         verify(notebookService, never()).updateStatus(any(), any());
     }
+
+    @Test
+    @DisplayName("Deve retornar reservas ativas do período para o calendário")
+    void shouldFindCalendarReservationsSuccessfully() {
+        Reservation reserva = Reservation.builder()
+                .id(1L)
+                .status(ReservationStatus.AGENDADO)
+                .departureDateTime(LocalDateTime.of(2026, 11, 15, 9, 0))
+                .returnDateTime(LocalDateTime.of(2026, 11, 15, 12, 0))
+                .notebook(notebook)
+                .user(user)
+                .location(location)
+                .build();
+
+        when(reservationRepository.findActiveReservationsInPeriod(
+                eq(LocalDateTime.of(2026, 11, 1, 0, 0)),
+                eq(LocalDateTime.of(2026, 11, 30, 23, 59, 59)),
+                eq(List.of(ReservationStatus.AGENDADO, ReservationStatus.CHECKED_IN))
+        )).thenReturn(List.of(reserva));
+
+        List<Reservation> result = reservationService.findCalendarReservations(11, 2026);
+
+        assertEquals(1, result.size());
+        assertEquals(1L, result.get(0).getId());
+    }
+
+    @Test
+    @DisplayName("Deve lançar BusinessException quando o mês informado para o calendário for inválido")
+    void shouldThrowExceptionWhenCalendarMonthIsInvalid() {
+        BusinessException ex = assertThrows(BusinessException.class, () ->
+                reservationService.findCalendarReservations(13, 2026)
+        );
+
+        assertEquals("O mês informado é inválido. Informe um valor entre 1 e 12.", ex.getMessage());
+    }
 }

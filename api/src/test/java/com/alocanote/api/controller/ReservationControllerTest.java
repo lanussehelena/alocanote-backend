@@ -126,4 +126,25 @@ class ReservationControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(ReservationStatus.FINALIZADO, response.getBody().status());
     }
+
+    @Test
+    @DisplayName("Deve listar reservas do calendário por mês e ano")
+    void shouldListCalendarReservations() {
+        Reservation reservation = Reservation.builder()
+                .id(200L)
+                .departureDateTime(LocalDateTime.of(2026, 11, 15, 9, 0))
+                .returnDateTime(LocalDateTime.of(2026, 11, 15, 12, 0))
+                .status(ReservationStatus.AGENDADO)
+                .build();
+
+        when(reservationService.findCalendarReservations(11, 2026)).thenReturn(List.of(reservation));
+
+        ResponseEntity<List<ReservationResponseDTO>> response = reservationController.listarCalendario(11, 2026);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertEquals(200L, response.getBody().get(0).id());
+        verify(reservationService).findCalendarReservations(11, 2026);
+    }
 }

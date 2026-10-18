@@ -101,7 +101,7 @@ stateDiagram-v2
 * **Resposta de Sucesso:** HTTP 200 OK (Sem corpo)
 
 #### 1.3. Validação do Código SMS
-* **Rota:** `POST /api/auth/verify-sms`
+* **Rota:** `POST /api/auth/verify-sms` *(ou `POST /auth/verify-sms`)*
 * **Acesso:** Público
 * **Payload de Envio (`TokenValidationRequestDTO`):**
   ```json
@@ -112,12 +112,28 @@ stateDiagram-v2
   ```
 * **Resposta de Sucesso:** HTTP 200 OK (`"Token validado com sucesso."`)
 
+#### 1.4. Cadastro de Colaborador via Auth
+* **Rota:** `POST /api/auth/register` *(ou `POST /auth/register`)*
+* **Acesso:** Público
+* **Payload de Envio (`RegisterUserRequestDTO`):**
+  ```json
+  {
+    "name": "Helena",
+    "email": "helena@alocanote.com",
+    "password": "senhaForte123",
+    "phone": "5511999999999",
+    "role": "PROJETISTA",
+    "customRole": null
+  }
+  ```
+* **Resposta de Sucesso:** HTTP 201 Created (`UserResponseDTO`)
+
 ---
 
-### 2. Gestão de Usuários (`/api/users`)
+### 2. Gestão de Usuários e Meu Perfil (`/api/users` ou `/users`)
 
 #### 2.1. Cadastro de Colaborador
-* **Rota:** `POST /api/users/register`
+* **Rota:** `POST /api/users/register` *(ou `POST /users/register`)*
 * **Acesso:** Público
 * **Payload de Envio (`RegisterUserRequestDTO`):**
   ```json
@@ -151,8 +167,45 @@ stateDiagram-v2
   }
   ```
 
-#### 2.2. Listar Colaboradores
-* **Rota:** `GET /api/users`
+#### 2.2. Obter Meu Perfil (Usuário Autenticado)
+* **Rota:** `GET /api/users/me` *(ou `GET /users/me`)*
+* **Acesso:** Requer Token JWT
+* **Resposta de Sucesso (HTTP 200 OK - `UserResponseDTO`):**
+  ```json
+  {
+    "id": 1,
+    "name": "Helena",
+    "email": "helena@alocanote.com",
+    "phone": "5511999999999",
+    "role": "PROJETISTA",
+    "customRole": null,
+    "accessLevel": "ROLE_USER",
+    "profilePictureUrl": "https://...",
+    "street": null,
+    "number": null,
+    "neighborhood": null,
+    "city": null,
+    "state": null,
+    "zipCode": null,
+    "createdAt": "2026-10-17T19:30:00"
+  }
+  ```
+
+#### 2.3. Atualizar Meu Perfil
+* **Rota:** `PUT /api/users/me` *(ou `PUT /users/me`)*
+* **Acesso:** Requer Token JWT
+* **Payload de Envio (`UpdateUserProfileRequestDTO`):**
+  ```json
+  {
+    "name": "Helena Silva",
+    "phone": "5511988887777",
+    "profilePictureUrl": "https://..."
+  }
+  ```
+* **Resposta de Sucesso (HTTP 200 OK - `UserResponseDTO`)**
+
+#### 2.4. Listar Colaboradores
+* **Rota:** `GET /api/users` *(ou `GET /users`)*
 * **Acesso:** Requer Token JWT
 * **Resposta de Sucesso (HTTP 200 OK - `List<UserResponseDTO>`):**
   ```json
@@ -386,6 +439,12 @@ stateDiagram-v2
     "purpose": "Apresentação de projeto para cliente na loja"
   }
   ```
+
+#### 4.7. Consultar Ocupação no Calendário
+* **Rota:** `GET /api/reservations/calendar?month=11&year=2026` *(ou `GET /reservations/calendar?month=11&year=2026`)*
+* **Acesso:** Requer Token JWT
+* **Ação do Backend:** Retorna todas as reservas ativas (`AGENDADO` e `CHECKED_IN`) do período especificado para exibição no calendário geral de ocupação.
+* **Resposta de Sucesso (HTTP 200 OK - `List<ReservationResponseDTO>`)**
 
 ---
 

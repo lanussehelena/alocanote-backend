@@ -15,6 +15,9 @@ import com.alocanote.api.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 
 @Service
@@ -85,6 +88,25 @@ public class ReservationService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
         return reservationRepository.findByUserId(user.getId());
+    }
+
+    // Retorna todas as reservas ativas do período (mês/ano) para o calendário geral de ocupação
+    @Transactional(readOnly = true)
+    public List<Reservation> findCalendarReservations(Integer month, Integer year) {
+        LocalDate now = LocalDate.now();
+        int targetMonth = (month != null) ? month : now.getMonthValue();
+        int targetYear = (year != null) ? year : now.getYear();
+
+        if (targetMonth < 1 || targetMonth > 12) {
+            throw new BusinessException("O mês informado é inválido. Informe um valor entre 1 e 12.");
+        }
+
+        YearMonth yearMonth = YearMonth.of(targetYear, targetMonth);
+        LocalDateTime startOfMonth = yearMonth.atDay(1).atStartOfDay();
+        LocalDateTime endOfMonth = yearMonth.atEndOfMonth().atTime(23, 59, 59);
+
+        List<ReservationStatus> activeStatuses = List.of(ReservationStatus.AGENDADO, ReservationStatus.CHECKED_IN);
+        return reservationRepository.findActiveReservationsInPeriod(startOfMonth, endOfMonth, activeStatuses);
     }
 
     // Busca reserva por ID garantindo a posse do recurso

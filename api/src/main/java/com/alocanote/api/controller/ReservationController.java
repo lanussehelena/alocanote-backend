@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/reservations")
+@RequestMapping({"/api/reservations", "/reservations"})
 public class ReservationController {
 
     private final ReservationService reservationService;
@@ -37,6 +37,18 @@ public class ReservationController {
             @AuthenticationPrincipal UserDetails userDetails) {
 
         List<Reservation> reservas = reservationService.findMyReservations(userDetails.getUsername());
+        List<ReservationResponseDTO> response = reservas.stream()
+                .map(ReservationResponseDTO::fromEntity)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/calendar")
+    public ResponseEntity<List<ReservationResponseDTO>> listarCalendario(
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+
+        List<Reservation> reservas = reservationService.findCalendarReservations(month, year);
         List<ReservationResponseDTO> response = reservas.stream()
                 .map(ReservationResponseDTO::fromEntity)
                 .toList();

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/notebooks")
+@RequestMapping({"/api/notebooks", "/notebooks"})
 public class NotebookController {
 
     private final NotebookService notebookService;

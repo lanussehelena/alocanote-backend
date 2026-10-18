@@ -1,9 +1,12 @@
 package com.alocanote.api.config;
 
 import com.alocanote.api.model.entity.Location;
+import com.alocanote.api.model.entity.Notebook;
 import com.alocanote.api.model.entity.User;
+import com.alocanote.api.model.enums.NotebookStatus;
 import com.alocanote.api.model.enums.Role;
 import com.alocanote.api.repository.LocationRepository;
+import com.alocanote.api.repository.NotebookRepository;
 import com.alocanote.api.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
@@ -17,13 +20,16 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final LocationRepository locationRepository;
+    private final NotebookRepository notebookRepository;
 
     public DataInitializer(UserRepository userRepository,
                            PasswordEncoder passwordEncoder,
-                           LocationRepository locationRepository) {
+                           LocationRepository locationRepository,
+                           NotebookRepository notebookRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.locationRepository = locationRepository;
+        this.notebookRepository = notebookRepository;
     }
 
     @Override
@@ -60,6 +66,31 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("✅ " + locaisIniciais.size() + " locais de retirada criados com sucesso.");
         } else {
             System.out.println("ℹ️ Locais de retirada já existem no banco de dados.");
+        }
+
+        // --- Seed dos Notebooks Iniciais ---
+        if (notebookRepository.count() == 0) {
+            List<Notebook> notebooksIniciais = List.of(
+                    Notebook.builder()
+                            .name("Dell Inspiron 15")
+                            .modelDescription("Intel i7, 16GB RAM, RTX 3050 - Projetos 3D")
+                            .status(NotebookStatus.DISPONIVEL)
+                            .build(),
+                    Notebook.builder()
+                            .name("Dell Latitude 3420")
+                            .modelDescription("Intel Core i5, 16GB RAM, SSD 512GB")
+                            .status(NotebookStatus.DISPONIVEL)
+                            .build(),
+                    Notebook.builder()
+                            .name("Lenovo ThinkPad E14")
+                            .modelDescription("Ryzen 7, 16GB RAM, SSD 512GB")
+                            .status(NotebookStatus.DISPONIVEL)
+                            .build()
+            );
+            notebookRepository.saveAll(notebooksIniciais);
+            System.out.println("✅ " + notebooksIniciais.size() + " notebooks iniciais criados com sucesso.");
+        } else {
+            System.out.println("ℹ️ Notebooks já existem no banco de dados.");
         }
     }
 
