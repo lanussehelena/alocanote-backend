@@ -1,5 +1,7 @@
 HELP.md
 target/
+data/
+**/data/
 .idea/
 *.iml
 .vscode/

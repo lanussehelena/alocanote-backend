@@ -45,6 +45,7 @@ public class User {
     @Column(name = "access_level", nullable = false)
     private String accessLevel;
 
+    @Column(name = "profile_picture_url", length = 10485760)
     private String profilePictureUrl;
 
     private String street;

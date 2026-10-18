@@ -33,11 +33,21 @@ public class SecurityFilter extends OncePerRequestFilter {
         if (token != null) {
             String subject = jwtTokenProvider.validateToken(token);
             if (subject != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(subject);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                UserDetails userDetails;
+                try {
+                    userDetails = userDetailsService.loadUserByUsername(subject);
+                } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) {
+                    String name = jwtTokenProvider.getClaim(token, "name");
+                    String role = jwtTokenProvider.getClaim(token, "role");
+                    String accessLevel = jwtTokenProvider.getClaim(token, "accessLevel");
+                    userDetails = userDetailsService.loadOrRecoverUserFromToken(subject, name, role, accessLevel);
+                }
+                if (userDetails != null) {
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         }
 

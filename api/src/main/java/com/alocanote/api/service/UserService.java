@@ -128,35 +128,54 @@ public class UserService {
         }
 
         if (dto.profilePictureUrl() != null) {
-            existingUser.setProfilePictureUrl(dto.profilePictureUrl());
+            existingUser.setProfilePictureUrl(dto.profilePictureUrl().trim());
+        }
+
+        if (dto.role() != null) {
+            existingUser.setRole(dto.role());
+            existingUser.setAccessLevel(dto.role() == com.alocanote.api.model.enums.Role.ADMINISTRADOR ? "ROLE_ADMIN" : "ROLE_USER");
         }
 
         if (dto.customRole() != null) {
-            existingUser.setCustomRole(dto.customRole());
+            existingUser.setCustomRole(dto.customRole().trim());
+        } else if (dto.role() != null && dto.role() != com.alocanote.api.model.enums.Role.OUTROS) {
+            existingUser.setCustomRole(null);
         }
 
         if (dto.street() != null) {
-            existingUser.setStreet(dto.street());
+            existingUser.setStreet(dto.street().trim());
         }
 
         if (dto.number() != null) {
-            existingUser.setNumber(dto.number());
+            existingUser.setNumber(dto.number().trim());
         }
 
         if (dto.neighborhood() != null) {
-            existingUser.setNeighborhood(dto.neighborhood());
+            existingUser.setNeighborhood(dto.neighborhood().trim());
         }
 
         if (dto.city() != null) {
-            existingUser.setCity(dto.city());
+            existingUser.setCity(dto.city().trim());
         }
 
         if (dto.state() != null) {
-            existingUser.setState(dto.state());
+            existingUser.setState(dto.state().trim());
         }
 
         if (dto.zipCode() != null) {
-            existingUser.setZipCode(dto.zipCode());
+            existingUser.setZipCode(dto.zipCode().trim());
+        }
+
+        if (dto.newPassword() != null && !dto.newPassword().isBlank()) {
+            if (existingUser.getPassword() != null && !existingUser.getPassword().isBlank()) {
+                if (dto.currentPassword() == null || dto.currentPassword().isBlank()) {
+                    throw new BusinessException("Informe a senha atual para alterar a senha.");
+                }
+                if (!passwordEncoder.matches(dto.currentPassword(), existingUser.getPassword())) {
+                    throw new BusinessException("A senha atual está incorreta.");
+                }
+            }
+            existingUser.setPassword(passwordEncoder.encode(dto.newPassword()));
         }
 
         User saved = userRepository.save(existingUser);

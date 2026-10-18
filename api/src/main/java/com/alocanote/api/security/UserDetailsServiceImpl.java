@@ -28,6 +28,36 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail))
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado com o e-mail: " + username));
 
+        return buildUserDetails(user);
+    }
+
+    public UserDetails loadOrRecoverUserFromToken(String email, String name, String roleClaim, String accessLevelClaim) {
+        String normalizedEmail = email != null ? email.trim().toLowerCase() : "";
+        User user = userRepository.findByEmail(normalizedEmail)
+                .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail))
+                .orElseGet(() -> {
+                    com.alocanote.api.model.enums.Role resolvedRole = com.alocanote.api.model.enums.Role.PROJETISTA;
+                    if (roleClaim != null) {
+                        try {
+                            resolvedRole = com.alocanote.api.model.enums.Role.valueOf(roleClaim);
+                        } catch (IllegalArgumentException ignored) {
+                        }
+                    }
+                    User recovered = User.builder()
+                            .name(name != null && !name.isBlank() ? name : "Colaborador")
+                            .email(normalizedEmail)
+                            .phone("55839" + String.format("%08d", Math.abs(normalizedEmail.hashCode()) % 100000000))
+                            .password("")
+                            .role(resolvedRole)
+                            .accessLevel(accessLevelClaim != null && !accessLevelClaim.isBlank() ? accessLevelClaim : "ROLE_USER")
+                            .build();
+                    return userRepository.save(recovered);
+                });
+
+        return buildUserDetails(user);
+    }
+
+    private UserDetails buildUserDetails(User user) {
         List<GrantedAuthority> authorities = new ArrayList<>();
         if (user.getAccessLevel() != null && !user.getAccessLevel().isBlank()) {
             authorities.add(new SimpleGrantedAuthority(user.getAccessLevel()));
