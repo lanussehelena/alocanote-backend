@@ -8,12 +8,21 @@ import com.alocanote.api.model.enums.Role;
 import com.alocanote.api.repository.LocationRepository;
 import com.alocanote.api.repository.NotebookRepository;
 import com.alocanote.api.repository.UserRepository;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
+import java.util.Optional;
 
 @Configuration
 public class DataInitializer implements CommandLineRunner {
@@ -36,6 +45,46 @@ public class DataInitializer implements CommandLineRunner {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * Garante que o banco H2 local aceite tanto o usuário "sa" (Spring Boot)
+     * quanto usuário em branco "" (criado pela ferramenta Database do IntelliJ),
+     * evitando erro 28000 (Wrong user name or password) na inicialização.
+     */
+    @Bean
+    public static BeanPostProcessor h2CredentialsSynchronizer() {
+        return new BeanPostProcessor() {
+            @Override
+            public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+                if (bean instanceof DataSourceProperties props) {
+                    String url = props.getUrl();
+                    if (url != null && url.startsWith("jdbc:h2:file:")) {
+                        garantirUsuariosH2(url,
+                                props.getUsername() != null ? props.getUsername() : "sa",
+                                props.getPassword() != null ? props.getPassword() : "");
+                    }
+                }
+                return bean;
+            }
+        };
+    }
+
+    private static void garantirUsuariosH2(String url, String username, String password) {
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE USER IF NOT EXISTS \"\" PASSWORD '' ADMIN");
+        } catch (SQLException ex) {
+            // Caso o arquivo .mv.db tenha sido criado pelo IntelliJ sem o usuário SA (erro 28000)
+            try (Connection fallbackConn = DriverManager.getConnection(url, "", "");
+                 Statement stmt = fallbackConn.createStatement()) {
+                stmt.execute("CREATE USER IF NOT EXISTS SA PASSWORD '' ADMIN");
+                stmt.execute("ALTER USER SA SET PASSWORD ''");
+                stmt.execute("ALTER USER SA ADMIN TRUE");
+            } catch (SQLException ignored) {
+                // Ignora caso o banco esteja inacessível ou com outra configuração
+            }
+        }
+    }
+
     @Override
     public void run(String... args) throws Exception {
         // Sincroniza sequências H2 no início para evitar violações de chave primária
@@ -43,19 +92,43 @@ public class DataInitializer implements CommandLineRunner {
         // --- Seed do usuário Administrador ---
         String adminEmail = "admin@alocanote.com";
 
-        if (userRepository.findByEmail(adminEmail).isEmpty()) {
+        Optional<User> existingAdminOpt = userRepository.findByEmail(adminEmail)
+                .or(() -> userRepository.findByEmailIgnoreCase(adminEmail));
+
+        if (existingAdminOpt.isEmpty()) {
             User admin = User.builder()
                     .name("Administrador do Sistema")
                     .email(adminEmail)
                     .phone("83999999999")
                     .password(passwordEncoder.encode("admin123"))
                     .role(Role.ADMINISTRADOR)
+                    .accessLevel("ROLE_ADMIN")
+                    .emailVerified(true)
                     .build();
 
             userRepository.save(admin);
             System.out.println("✅ Usuário ADMINISTRADOR criado com sucesso: " + adminEmail);
         } else {
-            System.out.println("ℹ️ Usuário ADMINISTRADOR já existe no banco de dados.");
+            User admin = existingAdminOpt.get();
+            boolean atualizado = false;
+            if (admin.getPassword() == null || admin.getPassword().isBlank()) {
+                admin.setPassword(passwordEncoder.encode("admin123"));
+                atualizado = true;
+            }
+            if (admin.getRole() != Role.ADMINISTRADOR) {
+                admin.setRole(Role.ADMINISTRADOR);
+                atualizado = true;
+            }
+            if (!"ROLE_ADMIN".equals(admin.getAccessLevel())) {
+                admin.setAccessLevel("ROLE_ADMIN");
+                atualizado = true;
+            }
+            if (atualizado) {
+                userRepository.save(admin);
+                System.out.println("✅ Credenciais do usuário ADMINISTRADOR sincronizadas: " + adminEmail);
+            } else {
+                System.out.println("ℹ️ Usuário ADMINISTRADOR já existe no banco de dados.");
+            }
         }
 
         // --- Seed dos Locais de Retirada ---
