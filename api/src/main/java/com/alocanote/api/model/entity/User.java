@@ -28,12 +28,21 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String phone;
 
     @JsonIgnore
-    @Column(nullable = false)
+    @Column
     private String password;
+
+    @Column(name = "firebase_uid", unique = true)
+    private String firebaseUid;
+
+    @Column(name = "auth_provider")
+    private String authProvider;
+
+    @Column(name = "email_verified")
+    private Boolean emailVerified;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role_enum", nullable = false)
@@ -61,8 +70,17 @@ public class User {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.role == null) {
+            this.role = Role.PROJETISTA;
+        }
         if (this.accessLevel == null) {
             this.accessLevel = (this.role == Role.ADMINISTRADOR) ? "ROLE_ADMIN" : "ROLE_USER";
+        }
+        if (this.authProvider == null) {
+            this.authProvider = "EMAIL";
+        }
+        if (this.emailVerified == null) {
+            this.emailVerified = false;
         }
     }
 }

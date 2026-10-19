@@ -18,10 +18,19 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsServiceImpl userDetailsService;
+    private final com.alocanote.api.service.AuthService authService;
 
     public SecurityFilter(JwtTokenProvider jwtTokenProvider, UserDetailsServiceImpl userDetailsService) {
+        this(jwtTokenProvider, userDetailsService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public SecurityFilter(JwtTokenProvider jwtTokenProvider,
+                          UserDetailsServiceImpl userDetailsService,
+                          @org.springframework.context.annotation.Lazy com.alocanote.api.service.AuthService authService) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.userDetailsService = userDetailsService;
+        this.authService = authService;
     }
 
     @Override
@@ -32,6 +41,11 @@ public class SecurityFilter extends OncePerRequestFilter {
 
         if (token != null) {
             String subject = jwtTokenProvider.validateToken(token);
+            if (subject == null && authService != null) {
+                subject = authService.resolveUserFromFirebaseToken(token)
+                        .map(com.alocanote.api.model.entity.User::getEmail)
+                        .orElse(null);
+            }
             if (subject != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails;
                 try {
@@ -57,7 +71,12 @@ public class SecurityFilter extends OncePerRequestFilter {
     private String recoverToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7).trim();
+            String candidate = authHeader.substring(7).trim();
+            if (!candidate.isEmpty()
+                    && !"null".equalsIgnoreCase(candidate)
+                    && !"undefined".equalsIgnoreCase(candidate)) {
+                return candidate;
+            }
         }
         return null;
     }

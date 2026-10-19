@@ -10,6 +10,7 @@ import com.alocanote.api.repository.NotebookRepository;
 import com.alocanote.api.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
@@ -21,19 +22,24 @@ public class DataInitializer implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final LocationRepository locationRepository;
     private final NotebookRepository notebookRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public DataInitializer(UserRepository userRepository,
                            PasswordEncoder passwordEncoder,
                            LocationRepository locationRepository,
-                           NotebookRepository notebookRepository) {
+                           NotebookRepository notebookRepository,
+                           JdbcTemplate jdbcTemplate) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.locationRepository = locationRepository;
         this.notebookRepository = notebookRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public void run(String... args) throws Exception {
+        // Sincroniza sequências H2 no início para evitar violações de chave primária
+        sincronizarSequencias();
         // --- Seed do usuário Administrador ---
         String adminEmail = "admin@alocanote.com";
 
@@ -92,6 +98,22 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             System.out.println("ℹ️ Notebooks já existem no banco de dados.");
         }
+
+        sincronizarSequencias();
+    }
+
+    private void sincronizarSequencias() {
+        List<String> tabelas = List.of("RESERVATIONS", "TB_USER", "TB_NOTEBOOK", "LOCATIONS");
+        for (String tabela : tabelas) {
+            try {
+                jdbcTemplate.execute(
+                        "ALTER TABLE " + tabela + " ALTER COLUMN id RESTART WITH (SELECT COALESCE(MAX(id), 0) + 1 FROM " + tabela + ")"
+                );
+            } catch (Exception e) {
+                // Silencia se a tabela ainda não existir ou banco for diferente de H2
+            }
+        }
+        System.out.println("✅ Sequências de chaves primárias sincronizadas com sucesso.");
     }
 
     private Location criarLocal(String name, String address, String cep) {

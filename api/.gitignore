@@ -6,6 +6,8 @@ data/
 *.iml
 .vscode/
 .env
+*firebase-service-account*.json
+*serviceAccountKey*.json
 
 ### STS ###
 .apt_generated

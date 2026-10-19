@@ -130,4 +130,32 @@ class AuthControllerTest {
         assertEquals("Helena", response.getBody().name());
         verify(userService).register(request);
     }
+
+    @Test
+    @DisplayName("Deve autenticar usuário via Firebase / Conta Google e retornar token JWT")
+    void shouldAuthenticateWithFirebaseSuccessfully() {
+        com.alocanote.api.dto.request.FirebaseAuthRequestDTO request =
+                new com.alocanote.api.dto.request.FirebaseAuthRequestDTO(
+                        "firebase.id.token", "Maria Google", "maria@gmail.com", null, "https://lh3.googleusercontent.com/photo.jpg", Role.PROJETISTA, null
+                );
+
+        LoginResponseDTO expectedResponse = LoginResponseDTO.builder()
+                .token("jwt.token.firebase")
+                .type("Bearer")
+                .email("maria@gmail.com")
+                .name("Maria Google")
+                .role("PROJETISTA")
+                .build();
+
+        when(authService.authenticateWithFirebase(request)).thenReturn(expectedResponse);
+
+        ResponseEntity<LoginResponseDTO> response = authController.authenticateWithFirebase(request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("jwt.token.firebase", response.getBody().token());
+        assertEquals("maria@gmail.com", response.getBody().email());
+        assertEquals("Maria Google", response.getBody().name());
+        verify(authService).authenticateWithFirebase(request);
+    }
 }

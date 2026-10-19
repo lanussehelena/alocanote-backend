@@ -16,10 +16,8 @@ public record RegisterUserRequestDTO(
         @NotBlank(message = "A senha é obrigatória")
         String password,
 
-        @NotBlank(message = "O telefone é obrigatório")
         String phone,
 
-        @NotNull(message = "O cargo é obrigatório")
         Role role,
 
         String customRole

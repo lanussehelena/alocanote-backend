@@ -69,6 +69,13 @@
 			<version>4.4.0</version>
 		</dependency>
 
+		<!-- Firebase Admin SDK (Autenticação por E-mail e Google) -->
+		<dependency>
+			<groupId>com.google.firebase</groupId>
+			<artifactId>firebase-admin</artifactId>
+			<version>9.3.0</version>
+		</dependency>
+
 		<!-- Lombok -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
