@@ -99,6 +99,23 @@ public class JwtTokenProvider {
         return validateToken(token);
     }
 
+    public String getClaim(String token, String claimName) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            var claim = JWT.require(algorithm)
+                    .withIssuer(ISSUER)
+                    .build()
+                    .verify(token)
+                    .getClaim(claimName);
+            return claim != null && !claim.isNull() ? claim.asString() : null;
+        } catch (JWTVerificationException exception) {
+            return null;
+        }
+    }
+
     private Instant getExpirationDate() {
         return Instant.now().plusMillis(expiration);
     }

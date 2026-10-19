@@ -48,12 +48,14 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new BusinessException("E-mail ou senha inválidos."));
+        String normalizedEmail = request.email().trim().toLowerCase();
+        User user = userRepository.findByEmail(normalizedEmail)
+                .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail))
+                .orElseThrow(() -> new BusinessException("E-mail não encontrado. Verifique o endereço digitado."));
 
         if (passwordEncoder != null && user.getPassword() != null
                 && !passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new BusinessException("E-mail ou senha inválidos.");
+            throw new BusinessException("Senha incorreta. Tente novamente.");
         }
 
         String token = jwtTokenProvider.generateToken(user);
