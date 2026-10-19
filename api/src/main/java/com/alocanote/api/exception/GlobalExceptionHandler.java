@@ -2,6 +2,8 @@ package com.alocanote.api.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -15,7 +17,7 @@ public class GlobalExceptionHandler {
         StandardError error = new StandardError(
                 LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),
-                "Operação Inválida",
+                "Bad Request",
                 ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
@@ -26,9 +28,25 @@ public class GlobalExceptionHandler {
         StandardError error = new StandardError(
                 LocalDateTime.now(),
                 HttpStatus.NOT_FOUND.value(),
-                "Não Encontrado",
+                "Not Found",
                 ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<StandardError> handleValidationException(MethodArgumentNotValidException ex) {
+        FieldError fieldError = ex.getBindingResult().getFieldError();
+        String message = (fieldError != null && fieldError.getDefaultMessage() != null)
+                ? fieldError.getDefaultMessage()
+                : "Dados de entrada inválidos.";
+
+        StandardError error = new StandardError(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                message
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 }

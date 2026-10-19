@@ -26,12 +26,14 @@ public class JwtTokenProvider {
     public String generateToken(User user) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
+            String roleClaim = (user.getRole() != null) ? user.getRole().name() : user.getAccessLevel();
             return JWT.create()
                     .withIssuer(ISSUER)
                     .withSubject(user.getEmail())
                     .withClaim("id", user.getId())
                     .withClaim("name", user.getName())
-                    .withClaim("role", user.getAccessLevel())
+                    .withClaim("role", roleClaim)
+                    .withClaim("accessLevel", user.getAccessLevel())
                     .withIssuedAt(Instant.now())
                     .withExpiresAt(getExpirationDate())
                     .sign(algorithm);

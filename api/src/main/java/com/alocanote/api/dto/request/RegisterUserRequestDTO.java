@@ -4,26 +4,23 @@ import com.alocanote.api.model.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
 
-@Data
-public class RegisterUserRequestDTO {
+public record RegisterUserRequestDTO(
+        @NotBlank(message = "O nome é obrigatório")
+        String name,
 
-    @NotBlank(message = "O nome é obrigatório")
-    private String name;
+        @NotBlank(message = "O e-mail é obrigatório")
+        @Email(message = "E-mail inválido")
+        String email,
 
-    @NotBlank(message = "O e-mail é obrigatório")
-    @Email(message = "E-mail inválido")
-    private String email;
+        @NotBlank(message = "A senha é obrigatória")
+        String password,
 
-    @NotBlank
-    private String password;
+        @NotBlank(message = "O telefone é obrigatório")
+        String phone,
 
-    @NotBlank(message = "O telefone é obrigatório")
-    private String phone;
+        @NotNull(message = "O cargo é obrigatório")
+        Role role,
 
-    @NotNull(message = "O cargo é obrigatório")
-    private Role role;
-
-    private String customRole;
-}
+        String customRole
+) {}

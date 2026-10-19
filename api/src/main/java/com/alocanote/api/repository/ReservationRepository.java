@@ -19,14 +19,24 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     List<Reservation> findByUserId(Long userId);
 
-    // NOVO: Verifica se existe conflito de horário para o mesmo notebook
+    // Verifica se existe conflito de horário para o mesmo notebook com status ativos
     @Query("SELECT r FROM Reservation r WHERE r.notebook.id = :notebookId " +
-            "AND r.status = :status " +
-            "AND ((r.departureDateTime <= :returnDateTime) AND (r.returnDateTime >= :departureDateTime))")
+            "AND r.status IN :statuses " +
+            "AND (r.departureDateTime < :returnDateTime AND r.returnDateTime > :departureDateTime)")
     List<Reservation> findConflictingReservations(
             @Param("notebookId") Long notebookId,
             @Param("departureDateTime") LocalDateTime departureDateTime,
             @Param("returnDateTime") LocalDateTime returnDateTime,
-            @Param("status") ReservationStatus status
+            @Param("statuses") List<ReservationStatus> statuses
+    );
+
+    // Retorna todas as reservas ativas dentro de um intervalo de datas para o calendário
+    @Query("SELECT r FROM Reservation r WHERE r.status IN :statuses " +
+            "AND (r.departureDateTime <= :endOfPeriod AND r.returnDateTime >= :startOfPeriod) " +
+            "ORDER BY r.departureDateTime ASC")
+    List<Reservation> findActiveReservationsInPeriod(
+            @Param("startOfPeriod") LocalDateTime startOfPeriod,
+            @Param("endOfPeriod") LocalDateTime endOfPeriod,
+            @Param("statuses") List<ReservationStatus> statuses
     );
 }
