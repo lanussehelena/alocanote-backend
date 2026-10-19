@@ -1,9 +1,8 @@
 package com.alocanote.api.controller;
 
+import com.alocanote.api.dto.request.FirebaseAuthRequestDTO;
 import com.alocanote.api.dto.request.LoginRequestDTO;
 import com.alocanote.api.dto.request.RegisterUserRequestDTO;
-import com.alocanote.api.dto.request.SendSmsRequestDTO;
-import com.alocanote.api.dto.request.TokenValidationRequestDTO;
 import com.alocanote.api.dto.response.LoginResponseDTO;
 import com.alocanote.api.dto.response.UserResponseDTO;
 import com.alocanote.api.exception.BusinessException;
@@ -53,7 +52,12 @@ public class AuthController {
                 .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail))
                 .orElseThrow(() -> new BusinessException("E-mail não encontrado. Verifique o endereço digitado."));
 
-        if (passwordEncoder != null && user.getPassword() != null
+        if ((user.getPassword() == null || user.getPassword().isBlank())
+                && "GOOGLE".equalsIgnoreCase(user.getAuthProvider())) {
+            throw new BusinessException("Esta conta foi cadastrada sem senha. Acesse a tela de Cadastro com este mesmo e-mail para cadastrar sua senha.");
+        }
+
+        if (passwordEncoder != null && user.getPassword() != null && !user.getPassword().isBlank()
                 && !passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new BusinessException("Senha incorreta. Tente novamente.");
         }
@@ -79,17 +83,10 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
     }
 
-    // Endpoint de reenvio de SMS: POST /api/auth/send-sms
-    @PostMapping("/send-sms")
-    public ResponseEntity<Void> sendSms(@RequestBody @Valid SendSmsRequestDTO dto) {
-        authService.generateAndSendTokenByPhone(dto.phone());
-        return ResponseEntity.ok().build();
-    }
-
-    // Endpoint de validação: POST /api/auth/verify-sms
-    @PostMapping("/verify-sms")
-    public ResponseEntity<String> verifyToken(@RequestBody @Valid TokenValidationRequestDTO dto) {
-        authService.verifyToken(dto.phone(), dto.code());
-        return ResponseEntity.ok("Token validado com sucesso.");
+    @PostMapping({"/firebase", "/google"})
+    public ResponseEntity<LoginResponseDTO> authenticateWithFirebase(
+            @Valid @RequestBody FirebaseAuthRequestDTO requestDTO) {
+        LoginResponseDTO response = authService.authenticateWithFirebase(requestDTO);
+        return ResponseEntity.ok(response);
     }
 }

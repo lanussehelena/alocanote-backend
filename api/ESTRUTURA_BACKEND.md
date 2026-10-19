@@ -66,10 +66,10 @@ stateDiagram-v2
 
 ## 📋 Catálogo Completo de Endpoints
 
-### 1. Autenticação & SMS (`/api/auth`)
+### 1. Autenticação (E-mail/Senha & Firebase / Google) (`/api/auth`)
 
-#### 1.1. Login do Usuário
-* **Rota:** `POST /api/auth/login`
+#### 1.1. Login Manual do Usuário (E-mail e Senha)
+* **Rota:** `POST /api/auth/login` *(ou `POST /auth/login`)*
 * **Acesso:** Público
 * **Payload de Envio (`LoginRequestDTO`):**
   ```json
@@ -85,34 +85,38 @@ stateDiagram-v2
     "type": "Bearer",
     "email": "maria@alocanote.com",
     "name": "Maria Silva",
-    "role": "ROLE_USER"
+    "role": "PROJETISTA"
   }
   ```
 
-#### 1.2. Reenvio de SMS (Mock)
-* **Rota:** `POST /api/auth/send-sms`
+#### 1.2. Autenticação via Firebase / Conta Google
+* **Rota:** `POST /api/auth/firebase` *(ou `POST /api/auth/google`, `/auth/firebase`, `/auth/google`)*
 * **Acesso:** Público
-* **Payload de Envio (`SendSmsRequestDTO`):**
+* **Descrição:** Recebe o `idToken` retornado pelo Firebase Authentication no app mobile (após login com Conta Google ou com E-mail/Senha no Firebase), valida o token, cria ou sincroniza automaticamente o usuário no banco (`tb_user`) com cargo padrão `PROJETISTA` caso seja o primeiro acesso, e retorna o JWT da API.
+* **Payload de Envio (`FirebaseAuthRequestDTO`):**
   ```json
   {
-    "phone": "83999998888"
-  }
-  ```
-* **Resposta de Sucesso:** HTTP 200 OK (Sem corpo)
-
-#### 1.3. Validação do Código SMS
-* **Rota:** `POST /api/auth/verify-sms` *(ou `POST /auth/verify-sms`)*
-* **Acesso:** Público
-* **Payload de Envio (`TokenValidationRequestDTO`):**
-  ```json
-  {
+    "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6...",
+    "name": "Maria Silva",
+    "email": "maria@gmail.com",
+    "profilePictureUrl": "https://lh3.googleusercontent.com/...",
     "phone": "83999998888",
-    "code": "123456"
+    "role": "PROJETISTA"
   }
   ```
-* **Resposta de Sucesso:** HTTP 200 OK (`"Token validado com sucesso."`)
+  *(Nota: apenas `idToken` é obrigatório; os demais campos são extraídos automaticamente do token do Firebase ou preenchidos com valores padrão).*
+* **Resposta de Sucesso (HTTP 200 - `LoginResponseDTO`):**
+  ```json
+  {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "type": "Bearer",
+    "email": "maria@gmail.com",
+    "name": "Maria Silva",
+    "role": "PROJETISTA"
+  }
+  ```
 
-#### 1.4. Cadastro de Colaborador via Auth
+#### 1.3. Cadastro Manual de Colaborador via Auth
 * **Rota:** `POST /api/auth/register` *(ou `POST /auth/register`)*
 * **Acesso:** Público
 * **Payload de Envio (`RegisterUserRequestDTO`):**

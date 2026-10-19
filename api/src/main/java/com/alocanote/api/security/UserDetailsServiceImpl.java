@@ -46,7 +46,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                     User recovered = User.builder()
                             .name(name != null && !name.isBlank() ? name : "Colaborador")
                             .email(normalizedEmail)
-                            .phone("55839" + String.format("%08d", Math.abs(normalizedEmail.hashCode()) % 100000000))
+                            .phone(null)
                             .password("")
                             .role(resolvedRole)
                             .accessLevel(accessLevelClaim != null && !accessLevelClaim.isBlank() ? accessLevelClaim : "ROLE_USER")

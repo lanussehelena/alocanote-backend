@@ -30,7 +30,7 @@ public class ReservationController {
             @Valid @RequestBody CreateReservationRequestDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        Reservation novaReserva = reservationService.createReservation(dto, userDetails.getUsername());
+        Reservation novaReserva = reservationService.createReservation(dto, extractUsername(userDetails));
         return ResponseEntity.status(HttpStatus.CREATED).body(ReservationResponseDTO.fromEntity(novaReserva));
     }
 
@@ -38,7 +38,7 @@ public class ReservationController {
     public ResponseEntity<List<ReservationResponseDTO>> listarMinhasReservas(
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        List<Reservation> reservas = reservationService.findMyReservations(userDetails.getUsername());
+        List<Reservation> reservas = reservationService.findMyReservations(extractUsername(userDetails));
         List<ReservationResponseDTO> response = reservas.stream()
                 .map(ReservationResponseDTO::fromEntity)
                 .toList();
@@ -62,7 +62,7 @@ public class ReservationController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        Reservation reserva = reservationService.findById(id, userDetails.getUsername());
+        Reservation reserva = reservationService.findById(id, extractUsername(userDetails));
         return ResponseEntity.ok(ReservationResponseDTO.fromEntity(reserva));
     }
 
@@ -78,9 +78,10 @@ public class ReservationController {
             @RequestBody(required = false) CheckInReservationRequestDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
 
+        String username = extractUsername(userDetails);
         Reservation reservaAtualizada = (dto == null)
-                ? reservationService.checkIn(id, userDetails.getUsername())
-                : reservationService.checkIn(id, userDetails.getUsername(), dto);
+                ? reservationService.checkIn(id, username)
+                : reservationService.checkIn(id, username, dto);
         return ResponseEntity.ok(ReservationResponseDTO.fromEntity(reservaAtualizada));
     }
 
@@ -89,7 +90,7 @@ public class ReservationController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        Reservation reservaAtualizada = reservationService.cancelReservation(id, userDetails.getUsername());
+        Reservation reservaAtualizada = reservationService.cancelReservation(id, extractUsername(userDetails));
         return ResponseEntity.ok(ReservationResponseDTO.fromEntity(reservaAtualizada));
     }
 
@@ -105,9 +106,14 @@ public class ReservationController {
             @RequestBody(required = false) FinishReservationRequestDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
 
+        String username = extractUsername(userDetails);
         Reservation reservaAtualizada = (dto == null)
-                ? reservationService.finishReservation(id, userDetails.getUsername())
-                : reservationService.finishReservation(id, userDetails.getUsername(), dto);
+                ? reservationService.finishReservation(id, username)
+                : reservationService.finishReservation(id, username, dto);
         return ResponseEntity.ok(ReservationResponseDTO.fromEntity(reservaAtualizada));
+    }
+
+    private String extractUsername(UserDetails userDetails) {
+        return (userDetails != null) ? userDetails.getUsername() : null;
     }
 }

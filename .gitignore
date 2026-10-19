@@ -1,0 +1,9 @@
+data/
+**/data/
+*.mv.db
+*.trace.db
+target/
+**/target/
+.vscode/
+.DS_Store
+*.log

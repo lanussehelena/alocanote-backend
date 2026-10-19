@@ -10,16 +10,16 @@ O **AlocaNote** é um sistema de gestão e reserva de ativos corporativos desenv
 ## 🛠️ Stack Tecnológica Permitida
 - **Linguagem:** Java 21
 - **Framework:** Spring Boot 3+
-- **Segurança:** Spring Security com tokens JWT (`JwtTokenProvider`)
+- **Segurança:** Spring Security com tokens JWT (`JwtTokenProvider`) e integração com Firebase Authentication (`FirebaseConfig`, `AuthService`)
 - **Persistência:** Spring Data JPA / Hibernate (H2 Database para ambiente de desenvolvimento/testes)
 - **Validação:** Jakarta Validation (`@Valid`, `@NotNull`, `@NotBlank`, etc.)
 
 ## 📁 Arquitetura de Pastas Fixa (`src/main/java/com/alocanote/api/`)
-- `config/`: Configurações globais (Segurança, CORS, Inicialização de dados via `DataInitializer`).
+- `config/`: Configurações globais (Segurança, CORS, Firebase Admin SDK via `FirebaseConfig`, Inicialização de dados via `DataInitializer`).
 - `controller/`: Controladores REST expostos (`@RestController`, `@RequestMapping`). Devem apenas receber requisições, validar DTOs e chamar os serviços.
-- `service/`: Regras de negócio da aplicação (ex: `AuthService`, `NotebookService`, `ReservationService`, `SmsService`).
+- `service/`: Regras de negócio da aplicação (ex: `AuthService`, `NotebookService`, `ReservationService`, `UserService`).
 - `repository/`: Interfaces de acesso a dados estendendo `JpaRepository`.
-- `model/entity/`: Entidades JPA mapeadas para o banco de dados (`User`, `Notebook`, `Reservation`, `VerificationToken`).
+- `model/entity/`: Entidades JPA mapeadas para o banco de dados (`User`, `Notebook`, `Reservation`, `Location`).
 - `dto/`: Objetos de Transferência de Dados separados em `request/` e `response/`.
 - `exception/`: Tratamento centralizado de erros (`GlobalExceptionHandler`, `BusinessException`, etc.).
 - `security/`: Filtros de autenticação, implementação de `UserDetailsService` e gestão do JWT.
@@ -41,9 +41,9 @@ Os notebooks possuem ciclos de vida bem definidos controlados pelo enum `Noteboo
 - `EM_USO`: Atualmente alocado a um colaborador.
 - `MANUTENCAO`: Indisponível temporariamente.
 
-### 3. Autenticação e Segurança por SMS (Mock)
-- O fluxo de autenticação suporta login padrão com e-mail e senha gerando um token JWT (`/api/auth/login`).
-- O sistema possui um serviço de duplo fator simulado (`SmsService`), que gera tokens de verificação de 6 dias/dígitos e imprime um mock no console (`[SMS MOCK]`) para validação via `/api/auth/verify-sms`.
+### 3. Autenticação por E-mail/Senha e Conta Google (Firebase Authentication)
+- O fluxo de autenticação suporta login manual com e-mail e senha (`/api/auth/login` e `/api/auth/register`) gerando um token JWT.
+- O sistema integra-se ao **Firebase Authentication** (`/api/auth/firebase` e `/api/auth/google`), permitindo autenticação com **Conta Google** ou e-mail/senha via `idToken` do Firebase, criando ou sincronizando automaticamente o colaborador no banco de dados.
 
 ### 4. Prevenção de Conflitos
 - O backend deve implementar travas lógicas para impedir agendamentos duplicados ou sobrepostos para o mesmo equipamento e faixa horária.

@@ -39,10 +39,8 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> obterMeuPerfil(
             @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
-            throw new BusinessException("Usuário não autenticado.");
-        }
-        UserResponseDTO profile = userService.getCurrentUser(userDetails.getUsername());
+        String email = (userDetails != null) ? userDetails.getUsername() : null;
+        UserResponseDTO profile = userService.getCurrentUser(email);
         return ResponseEntity.ok(profile);
     }
 
@@ -50,10 +48,8 @@ public class UserController {
     public ResponseEntity<UserResponseDTO> atualizarMeuPerfil(
             @Valid @RequestBody UpdateUserProfileRequestDTO requestDTO,
             @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
-            throw new BusinessException("Usuário não autenticado.");
-        }
-        UserResponseDTO updated = userService.updateCurrentUser(userDetails.getUsername(), requestDTO);
+        String email = (userDetails != null) ? userDetails.getUsername() : null;
+        UserResponseDTO updated = userService.updateCurrentUser(email, requestDTO);
         return ResponseEntity.ok(updated);
     }
 }

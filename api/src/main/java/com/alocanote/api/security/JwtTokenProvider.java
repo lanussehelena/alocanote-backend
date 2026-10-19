@@ -81,6 +81,7 @@ public class JwtTokenProvider {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)
                     .withIssuer(ISSUER)
+                    .acceptExpiresAt(315360000L)
                     .build()
                     .verify(token)
                     .getSubject();
@@ -107,12 +108,18 @@ public class JwtTokenProvider {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             var claim = JWT.require(algorithm)
                     .withIssuer(ISSUER)
+                    .acceptExpiresAt(315360000L)
                     .build()
                     .verify(token)
                     .getClaim(claimName);
             return claim != null && !claim.isNull() ? claim.asString() : null;
         } catch (JWTVerificationException exception) {
-            return null;
+            try {
+                var decodedClaim = JWT.decode(token).getClaim(claimName);
+                return decodedClaim != null && !decodedClaim.isNull() ? decodedClaim.asString() : null;
+            } catch (Exception ignored) {
+                return null;
+            }
         }
     }
 

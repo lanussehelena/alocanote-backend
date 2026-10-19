@@ -10,7 +10,7 @@ Linguagem: Java 17+
 
 Framework: Spring Boot 3.x
 
-Segurança: Spring Security + JWT (JSON Web Token) + Verificação em 2 Etapas (Token SMS Mock)
+Segurança: Spring Security + JWT (JSON Web Token) + Firebase Authentication (Conta Google e E-mail/Senha)
 
 Persistência de Dados: Spring Data JPA / Hibernate
 
@@ -24,9 +24,9 @@ Gestão de Usuários e Autenticação:
 
 Cadastro e Login de colaboradores associados a papéis específicos (ADMINISTRADOR, PROJETISTA, CONFERENTE, CONSULTOR_VENDAS, OUTROS).
 
-Verificação de segurança via token de 6 dígitos enviado por SMS (Mock) antes da liberação do acesso.
+Autenticação por e-mail e senha manual ou via Conta Google integrada com o Firebase Authentication.
 
-Autenticação baseada em tokens JWT para rotas protegidas.
+Autenticação baseada em tokens JWT e Firebase ID Tokens para rotas protegidas.
 
 Gestão de Equipamentos (Notebooks):
 
@@ -63,13 +63,13 @@ Compilar e executar a aplicação:
 ./mvnw spring-boot:run
 
 
-A API estará disponível por padrão em: http://localhost:8080
+A API estará disponível por padrão em: http://localhost:8082
 
 Acessar o Banco de Dados H2 Console:
 
-URL: http://localhost:8080/h2-console
+URL: http://localhost:8082/h2-console
 
-JDBC URL: jdbc:h2:mem:alocanotedb
+JDBC URL: jdbc:h2:file:./data/alocanotedb
 
 User: sa
 
@@ -79,11 +79,11 @@ Password: (deixar em branco)
 
 🔐 Autenticação (/api/auth)
 
-POST /api/auth/register — Cadastra um novo colaborador.
+POST /api/auth/register — Cadastra manualmente um novo colaborador com e-mail e senha.
 
-POST /api/auth/verify-token — Valida o código SMS de 6 dígitos.
+POST /api/auth/login — Autentica o usuário com e-mail e senha e retorna o token JWT.
 
-POST /api/auth/login — Autentica o usuário e retorna o token JWT.
+POST /api/auth/firebase (ou POST /api/auth/google) — Autentica/sincroniza o usuário via token do Firebase Authentication (Conta Google ou E-mail/Senha) e retorna o token JWT.
 
 💻 Notebooks (/api/notebooks)
 
