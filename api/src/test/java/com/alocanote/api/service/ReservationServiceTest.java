@@ -241,8 +241,40 @@ class ReservationServiceTest {
         Reservation result = reservationService.checkIn(1L, user.getEmail());
 
         assertEquals(ReservationStatus.CHECKED_IN, result.getStatus());
+        assertNotNull(result.getCheckInAt());
         verify(notebookService).updateStatus(notebook.getId(), NotebookStatus.EM_USO);
         verify(reservationRepository).save(reserva);
+    }
+
+    @Test
+    @DisplayName("Deve realizar check-in registrando local de retirada e coordenadas")
+    void shouldCheckInWithLocationDetailsSuccessfully() {
+        Reservation reserva = Reservation.builder()
+                .id(1L)
+                .status(ReservationStatus.AGENDADO)
+                .notebook(notebook)
+                .user(user)
+                .build();
+
+        com.alocanote.api.dto.request.CheckInReservationRequestDTO dto =
+                new com.alocanote.api.dto.request.CheckInReservationRequestDTO(
+                        "OUTRO_LOCAL",
+                        "Av. Epitácio Pessoa, 1200 - João Pessoa, PB",
+                        -7.1195,
+                        -34.8450
+                );
+
+        when(reservationRepository.findById(1L)).thenReturn(Optional.of(reserva));
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Reservation result = reservationService.checkIn(1L, user.getEmail(), dto);
+
+        assertEquals(ReservationStatus.CHECKED_IN, result.getStatus());
+        assertEquals("OUTRO_LOCAL", result.getCheckInLocationType());
+        assertEquals("Av. Epitácio Pessoa, 1200 - João Pessoa, PB", result.getCheckInAddress());
+        assertEquals(-7.1195, result.getCheckInLatitude());
+        assertEquals(-34.8450, result.getCheckInLongitude());
+        assertNotNull(result.getCheckInAt());
     }
 
     @Test
@@ -340,8 +372,42 @@ class ReservationServiceTest {
         Reservation result = reservationService.finishReservation(1L, user.getEmail());
 
         assertEquals(ReservationStatus.FINALIZADO, result.getStatus());
+        assertNotNull(result.getReturnedAt());
         verify(notebookService).updateStatus(notebook.getId(), NotebookStatus.DISPONIVEL);
         verify(reservationRepository).save(reserva);
+    }
+
+    @Test
+    @DisplayName("Deve finalizar reserva registrando local de devolução e foto automática")
+    void shouldFinishReservationWithLocationAndPhotoSuccessfully() {
+        Reservation reserva = Reservation.builder()
+                .id(1L)
+                .status(ReservationStatus.CHECKED_IN)
+                .notebook(notebook)
+                .user(user)
+                .build();
+
+        com.alocanote.api.dto.request.FinishReservationRequestDTO dto =
+                new com.alocanote.api.dto.request.FinishReservationRequestDTO(
+                        "LOJA",
+                        "Loja Central - João Pessoa, PB",
+                        -7.1153,
+                        -34.8610,
+                        "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+                );
+
+        when(reservationRepository.findById(1L)).thenReturn(Optional.of(reserva));
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Reservation result = reservationService.finishReservation(1L, user.getEmail(), dto);
+
+        assertEquals(ReservationStatus.FINALIZADO, result.getStatus());
+        assertEquals("LOJA", result.getReturnLocationType());
+        assertEquals("Loja Central - João Pessoa, PB", result.getReturnAddress());
+        assertEquals(-7.1153, result.getReturnLatitude());
+        assertEquals(-34.8610, result.getReturnLongitude());
+        assertEquals("data:image/jpeg;base64,/9j/4AAQSkZJRg==", result.getReturnPhotoUrl());
+        assertNotNull(result.getReturnedAt());
     }
 
     @Test

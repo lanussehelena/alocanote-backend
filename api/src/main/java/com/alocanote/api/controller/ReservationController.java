@@ -1,6 +1,8 @@
 package com.alocanote.api.controller;
 
+import com.alocanote.api.dto.request.CheckInReservationRequestDTO;
 import com.alocanote.api.dto.request.CreateReservationRequestDTO;
+import com.alocanote.api.dto.request.FinishReservationRequestDTO;
 import com.alocanote.api.dto.response.ReservationResponseDTO;
 import com.alocanote.api.model.entity.Reservation;
 import com.alocanote.api.service.ReservationService;
@@ -64,12 +66,21 @@ public class ReservationController {
         return ResponseEntity.ok(ReservationResponseDTO.fromEntity(reserva));
     }
 
+    public ResponseEntity<ReservationResponseDTO> checkIn(
+            Long id,
+            UserDetails userDetails) {
+        return checkIn(id, null, userDetails);
+    }
+
     @PatchMapping("/{id}/check-in")
     public ResponseEntity<ReservationResponseDTO> checkIn(
             @PathVariable Long id,
+            @RequestBody(required = false) CheckInReservationRequestDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        Reservation reservaAtualizada = reservationService.checkIn(id, userDetails.getUsername());
+        Reservation reservaAtualizada = (dto == null)
+                ? reservationService.checkIn(id, userDetails.getUsername())
+                : reservationService.checkIn(id, userDetails.getUsername(), dto);
         return ResponseEntity.ok(ReservationResponseDTO.fromEntity(reservaAtualizada));
     }
 
@@ -82,12 +93,21 @@ public class ReservationController {
         return ResponseEntity.ok(ReservationResponseDTO.fromEntity(reservaAtualizada));
     }
 
+    public ResponseEntity<ReservationResponseDTO> finalizar(
+            Long id,
+            UserDetails userDetails) {
+        return finalizar(id, null, userDetails);
+    }
+
     @PatchMapping({"/{id}/finish", "/{id}/check-out"})
     public ResponseEntity<ReservationResponseDTO> finalizar(
             @PathVariable Long id,
+            @RequestBody(required = false) FinishReservationRequestDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        Reservation reservaAtualizada = reservationService.finishReservation(id, userDetails.getUsername());
+        Reservation reservaAtualizada = (dto == null)
+                ? reservationService.finishReservation(id, userDetails.getUsername())
+                : reservationService.finishReservation(id, userDetails.getUsername(), dto);
         return ResponseEntity.ok(ReservationResponseDTO.fromEntity(reservaAtualizada));
     }
 }
