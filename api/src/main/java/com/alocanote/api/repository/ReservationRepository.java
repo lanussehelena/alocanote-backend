@@ -13,9 +13,9 @@ import java.util.List;
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
-
     List<Reservation> findByNotebookIdAndStatus(Long notebookId, ReservationStatus status);
 
+    List<Reservation> findByNotebookId(Long notebookId);
 
     List<Reservation> findByUserId(Long userId);
 

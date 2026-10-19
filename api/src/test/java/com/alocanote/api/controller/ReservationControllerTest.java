@@ -33,6 +33,7 @@ class ReservationControllerTest {
     private ReservationController reservationController;
 
     private final UserDetails userDetails = new User("maria@alocanote.com", "password", Collections.emptyList());
+    private final UserDetails adminDetails = new User("admin@alocanote.com", "password", Collections.emptyList());
 
     @Test
     @DisplayName("Deve agendar notebook retornando ReservationResponseDTO com HTTP 201")
@@ -146,5 +147,16 @@ class ReservationControllerTest {
         assertEquals(1, response.getBody().size());
         assertEquals(200L, response.getBody().get(0).id());
         verify(reservationService).findCalendarReservations(11, 2026);
+    }
+
+    @Test
+    @DisplayName("Deve excluir reserva como administrador via DELETE /reservations/{id}")
+    void shouldDeleteReservationSuccessfully() {
+        doNothing().when(reservationService).deleteReservation(100L, "admin@alocanote.com");
+
+        ResponseEntity<Void> response = reservationController.excluirReserva(100L, adminDetails);
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        verify(reservationService).deleteReservation(100L, "admin@alocanote.com");
     }
 }
