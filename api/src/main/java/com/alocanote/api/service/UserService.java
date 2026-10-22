@@ -5,7 +5,12 @@ import com.alocanote.api.dto.request.UpdateUserProfileRequestDTO;
 import com.alocanote.api.dto.response.UserResponseDTO;
 import com.alocanote.api.exception.BusinessException;
 import com.alocanote.api.exception.ResourceNotFoundException;
+import com.alocanote.api.model.entity.Reservation;
 import com.alocanote.api.model.entity.User;
+import com.alocanote.api.model.enums.NotebookStatus;
+import com.alocanote.api.model.enums.ReservationStatus;
+import com.alocanote.api.model.enums.Role;
+import com.alocanote.api.repository.ReservationRepository;
 import com.alocanote.api.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,15 +24,26 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ReservationRepository reservationRepository;
+    private final NotebookService notebookService;
 
-    @Autowired
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this(userRepository, passwordEncoder, null, null);
     }
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthService ignoredAuthService) {
-        this(userRepository, passwordEncoder);
+        this(userRepository, passwordEncoder, null, null);
+    }
+
+    @Autowired
+    public UserService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       ReservationRepository reservationRepository,
+                       NotebookService notebookService) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.reservationRepository = reservationRepository;
+        this.notebookService = notebookService;
     }
 
     @Transactional
@@ -57,6 +73,7 @@ public class UserService {
                 }
                 if (dto.role() != null) {
                     existing.setRole(dto.role());
+                    existing.setAccessLevel(dto.role() == Role.ADMINISTRADOR ? "ROLE_ADMIN" : "ROLE_USER");
                 }
                 return userRepository.save(existing);
             }
@@ -67,9 +84,9 @@ public class UserService {
             throw new BusinessException("Já existe um usuário cadastrado com este telefone.");
         }
 
-        com.alocanote.api.model.enums.Role resolvedRole = dto.role() != null
+        Role resolvedRole = dto.role() != null
                 ? dto.role()
-                : com.alocanote.api.model.enums.Role.PROJETISTA;
+                : Role.PROJETISTA;
 
         User user = User.builder()
                 .name(dto.name().trim())
@@ -77,6 +94,7 @@ public class UserService {
                 .phone(normalizedPhone)
                 .role(resolvedRole)
                 .customRole(dto.customRole())
+                .accessLevel(resolvedRole == Role.ADMINISTRADOR ? "ROLE_ADMIN" : "ROLE_USER")
                 .password(passwordEncoder.encode(dto.password()))
                 .authProvider("EMAIL")
                 .emailVerified(true)
@@ -124,12 +142,12 @@ public class UserService {
 
         if (dto.role() != null) {
             existingUser.setRole(dto.role());
-            existingUser.setAccessLevel(dto.role() == com.alocanote.api.model.enums.Role.ADMINISTRADOR ? "ROLE_ADMIN" : "ROLE_USER");
+            existingUser.setAccessLevel(dto.role() == Role.ADMINISTRADOR ? "ROLE_ADMIN" : "ROLE_USER");
         }
 
         if (dto.customRole() != null) {
             existingUser.setCustomRole(dto.customRole().trim());
-        } else if (dto.role() != null && dto.role() != com.alocanote.api.model.enums.Role.OUTROS) {
+        } else if (dto.role() != null && dto.role() != Role.OUTROS) {
             existingUser.setCustomRole(null);
         }
 
@@ -198,8 +216,54 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Long id) {
+        deleteUser(id, null);
+    }
+
+    @Transactional
+    public void deleteUser(Long id, String requesterEmail) {
+        validarPermissaoAdmin(requesterEmail, "Acesso negado: apenas o administrador pode excluir perfis de usuários.");
+
         User user = findById(id);
+
+        if ("admin@alocanote.com".equalsIgnoreCase(user.getEmail())) {
+            throw new BusinessException("Não é permitido excluir a conta do administrador principal do sistema.");
+        }
+
+        if (reservationRepository != null) {
+            List<Reservation> userReservations = reservationRepository.findByUserId(id);
+            for (Reservation reservation : userReservations) {
+                if (reservation.getStatus() == ReservationStatus.CHECKED_IN
+                        && reservation.getNotebook() != null
+                        && notebookService != null) {
+                    notebookService.updateStatus(reservation.getNotebook().getId(), NotebookStatus.DISPONIVEL);
+                }
+            }
+            if (!userReservations.isEmpty()) {
+                reservationRepository.deleteAll(userReservations);
+            }
+        }
+
         userRepository.delete(user);
+    }
+
+    private void validarPermissaoAdmin(String requesterEmail, String errorMessage) {
+        if (requesterEmail == null || requesterEmail.isBlank() || userRepository == null) {
+            return;
+        }
+        String normalizedEmail = requesterEmail.trim().toLowerCase();
+        if ("admin@alocanote.com".equalsIgnoreCase(normalizedEmail)) {
+            return;
+        }
+        User requester = userRepository.findByEmail(normalizedEmail)
+                .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail))
+                .orElseThrow(() -> new BusinessException(errorMessage));
+
+        boolean isAdmin = requester.getRole() == Role.ADMINISTRADOR
+                || "ROLE_ADMIN".equalsIgnoreCase(requester.getAccessLevel());
+
+        if (!isAdmin) {
+            throw new BusinessException(errorMessage);
+        }
     }
 
     private User resolveCurrentUser(String email) {

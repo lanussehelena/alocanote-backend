@@ -33,6 +33,7 @@ class UserControllerTest {
     private UserController userController;
 
     private final UserDetails userDetails = new User("helena@alocanote.com", "password", Collections.emptyList());
+    private final UserDetails adminDetails = new User("admin@alocanote.com", "password", Collections.emptyList());
 
     @Test
     @DisplayName("Deve cadastrar novo usuário retornando UserResponseDTO com HTTP 201")
@@ -118,5 +119,16 @@ class UserControllerTest {
         assertEquals("5511988887777", response.getBody().phone());
         assertEquals("https://avatar.url/novo.png", response.getBody().profilePictureUrl());
         verify(userService).updateCurrentUser("helena@alocanote.com", updateRequest);
+    }
+
+    @Test
+    @DisplayName("Deve excluir perfil de usuário como administrador via DELETE /users/{id}")
+    void shouldDeleteUserProfileSuccessfully() {
+        doNothing().when(userService).deleteUser(5L, "admin@alocanote.com");
+
+        ResponseEntity<Void> response = userController.excluirUsuario(5L, adminDetails);
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        verify(userService).deleteUser(5L, "admin@alocanote.com");
     }
 }

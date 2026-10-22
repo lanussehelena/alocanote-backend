@@ -45,6 +45,15 @@ public class ReservationController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<List<ReservationResponseDTO>> listarTodasReservas() {
+        List<Reservation> reservas = reservationService.findAllReservations();
+        List<ReservationResponseDTO> response = reservas.stream()
+                .map(ReservationResponseDTO::fromEntity)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/calendar")
     public ResponseEntity<List<ReservationResponseDTO>> listarCalendario(
             @RequestParam(required = false) Integer month,
@@ -111,6 +120,24 @@ public class ReservationController {
                 ? reservationService.finishReservation(id, username)
                 : reservationService.finishReservation(id, username, dto);
         return ResponseEntity.ok(ReservationResponseDTO.fromEntity(reservaAtualizada));
+    }
+
+    public ResponseEntity<Void> excluirReserva(Long id) {
+        return excluirReserva(id, null);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluirReserva(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        String email = extractUsername(userDetails);
+        if (email != null) {
+            reservationService.deleteReservation(id, email);
+        } else {
+            reservationService.deleteReservation(id);
+        }
+        return ResponseEntity.noContent().build();
     }
 
     private String extractUsername(UserDetails userDetails) {

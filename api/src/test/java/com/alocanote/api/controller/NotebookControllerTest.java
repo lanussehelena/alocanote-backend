@@ -12,7 +12,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,6 +29,8 @@ class NotebookControllerTest {
 
     @InjectMocks
     private NotebookController notebookController;
+
+    private final UserDetails adminDetails = new User("admin@alocanote.com", "password", Collections.emptyList());
 
     @Test
     @DisplayName("Deve criar notebook e retornar NotebookResponseDTO com HTTP 201")
@@ -76,5 +81,16 @@ class NotebookControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(10L, response.getBody().id());
+    }
+
+    @Test
+    @DisplayName("Deve excluir notebook como administrador retornando HTTP 204")
+    void shouldDeleteNotebookSuccessfully() {
+        doNothing().when(notebookService).deleteNotebook(10L, "admin@alocanote.com");
+
+        ResponseEntity<Void> response = notebookController.excluirNotebook(10L, adminDetails);
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        verify(notebookService).deleteNotebook(10L, "admin@alocanote.com");
     }
 }

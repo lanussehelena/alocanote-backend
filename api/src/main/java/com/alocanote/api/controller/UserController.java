@@ -3,7 +3,6 @@ package com.alocanote.api.controller;
 import com.alocanote.api.dto.request.RegisterUserRequestDTO;
 import com.alocanote.api.dto.request.UpdateUserProfileRequestDTO;
 import com.alocanote.api.dto.response.UserResponseDTO;
-import com.alocanote.api.exception.BusinessException;
 import com.alocanote.api.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -51,5 +50,22 @@ public class UserController {
         String email = (userDetails != null) ? userDetails.getUsername() : null;
         UserResponseDTO updated = userService.updateCurrentUser(email, requestDTO);
         return ResponseEntity.ok(updated);
+    }
+
+    public ResponseEntity<Void> excluirUsuario(Long id) {
+        return excluirUsuario(id, null);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluirUsuario(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String email = (userDetails != null) ? userDetails.getUsername() : null;
+        if (email != null) {
+            userService.deleteUser(id, email);
+        } else {
+            userService.deleteUser(id);
+        }
+        return ResponseEntity.noContent().build();
     }
 }
