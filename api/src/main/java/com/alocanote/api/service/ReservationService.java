@@ -90,6 +90,9 @@ public class ReservationService {
     // Retorna as reservas pertencentes ao usuário autenticado
     @Transactional(readOnly = true)
     public List<Reservation> findMyReservations(String userEmail) {
+        if (isAdministrador(userEmail)) {
+            return reservationRepository.findAll();
+        }
         User user = resolveUserByEmail(userEmail);
         return reservationRepository.findByUserId(user.getId());
     }
