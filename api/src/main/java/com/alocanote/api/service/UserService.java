@@ -215,6 +215,45 @@ public class UserService {
     }
 
     @Transactional
+    public UserResponseDTO updateUser(Long id, UpdateUserProfileRequestDTO dto, String requesterEmail) {
+        validarPermissaoAdmin(requesterEmail, "Acesso negado: apenas o administrador pode editar outros usuários.");
+
+        User existingUser = findById(id);
+
+        if (dto.name() != null && !dto.name().isBlank()) {
+            existingUser.setName(dto.name().trim());
+        }
+        if (dto.phone() != null && !dto.phone().isBlank()) {
+            String newPhone = dto.phone().trim();
+            if (!newPhone.equals(existingUser.getPhone()) && userRepository.existsByPhone(newPhone)) {
+                throw new BusinessException("Já existe um usuário cadastrado com este telefone.");
+            }
+            existingUser.setPhone(newPhone);
+        }
+        if (dto.role() != null) {
+            existingUser.setRole(dto.role());
+            existingUser.setAccessLevel(dto.role() == Role.ADMINISTRADOR ? "ROLE_ADMIN" : "ROLE_USER");
+        }
+        if (dto.customRole() != null) {
+            existingUser.setCustomRole(dto.customRole().trim());
+        } else if (dto.role() != null && dto.role() != Role.OUTROS) {
+            existingUser.setCustomRole(null);
+        }
+        if (dto.street() != null) existingUser.setStreet(dto.street().trim());
+        if (dto.number() != null) existingUser.setNumber(dto.number().trim());
+        if (dto.neighborhood() != null) existingUser.setNeighborhood(dto.neighborhood().trim());
+        if (dto.city() != null) existingUser.setCity(dto.city().trim());
+        if (dto.state() != null) existingUser.setState(dto.state().trim());
+        if (dto.zipCode() != null) existingUser.setZipCode(dto.zipCode().trim());
+        if (dto.newPassword() != null && !dto.newPassword().isBlank()) {
+            existingUser.setPassword(passwordEncoder.encode(dto.newPassword()));
+        }
+
+        User saved = userRepository.save(existingUser);
+        return UserResponseDTO.fromEntity(saved);
+    }
+
+    @Transactional
     public void deleteUser(Long id) {
         deleteUser(id, null);
     }

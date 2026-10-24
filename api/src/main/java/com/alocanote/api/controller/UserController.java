@@ -23,7 +23,7 @@ public class UserController {
         this.userService = userService;
     }
 
-    @PostMapping("/register")
+    @PostMapping({"", "/register"})
     public ResponseEntity<UserResponseDTO> register(@Valid @RequestBody RegisterUserRequestDTO requestDTO) {
         UserResponseDTO newUser = userService.register(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
@@ -49,6 +49,16 @@ public class UserController {
             @AuthenticationPrincipal UserDetails userDetails) {
         String email = (userDetails != null) ? userDetails.getUsername() : null;
         UserResponseDTO updated = userService.updateCurrentUser(email, requestDTO);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UserResponseDTO> atualizarUsuario(
+            @PathVariable Long id,
+            @RequestBody UpdateUserProfileRequestDTO requestDTO,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String email = (userDetails != null) ? userDetails.getUsername() : null;
+        UserResponseDTO updated = userService.updateUser(id, requestDTO, email);
         return ResponseEntity.ok(updated);
     }
 
