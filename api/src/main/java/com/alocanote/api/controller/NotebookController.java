@@ -49,6 +49,18 @@ public class NotebookController {
         return ResponseEntity.ok(notebook);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<NotebookResponseDTO> atualizarNotebook(
+            @PathVariable Long id,
+            @RequestBody CreateNotebookRequestDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String email = (userDetails != null) ? userDetails.getUsername() : null;
+        NotebookResponseDTO atualizado = (email != null)
+                ? notebookService.updateNotebook(id, dto, email)
+                : notebookService.updateNotebook(id, dto);
+        return ResponseEntity.ok(atualizado);
+    }
+
     public ResponseEntity<Void> excluirNotebook(Long id) {
         return excluirNotebook(id, null);
     }

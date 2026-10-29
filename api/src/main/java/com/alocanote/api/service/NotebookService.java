@@ -93,6 +93,31 @@ public class NotebookService {
     }
 
     @Transactional
+    public NotebookResponseDTO updateNotebook(Long id, CreateNotebookRequestDTO dto) {
+        return updateNotebook(id, dto, null);
+    }
+
+    @Transactional
+    public NotebookResponseDTO updateNotebook(Long id, CreateNotebookRequestDTO dto, String requesterEmail) {
+        validarPermissaoAdmin(requesterEmail, "Acesso negado: apenas o administrador pode atualizar notebooks.");
+
+        Notebook notebook = findById(id);
+
+        if (dto.name() != null && !dto.name().isBlank()) {
+            notebook.setName(dto.name().trim());
+        }
+        if (dto.modelDescription() != null && !dto.modelDescription().isBlank()) {
+            notebook.setModelDescription(dto.modelDescription().trim());
+        }
+        if (dto.status() != null) {
+            notebook.setStatus(dto.status());
+        }
+
+        Notebook updated = notebookRepository.save(notebook);
+        return NotebookResponseDTO.fromEntity(updated);
+    }
+
+    @Transactional
     public void deleteNotebook(Long id) {
         deleteNotebook(id, null);
     }

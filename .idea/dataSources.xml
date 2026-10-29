@@ -6,7 +6,6 @@
       <synchronize>true</synchronize>
       <jdbc-driver>org.h2.Driver</jdbc-driver>
       <jdbc-url>jdbc:h2:file:./data/alocanotedb;AUTO_SERVER=TRUE;USER=sa</jdbc-url>
-      <user-name>sa</user-name>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
   </component>
