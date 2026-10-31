@@ -87,7 +87,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Sincroniza sequências H2 no início para evitar violações de chave primária
+        // Sincroniza sequências de chaves primárias no início para evitar violações
         sincronizarSequencias();
         // --- Seed do usuário Administrador ---
         String adminEmail = "admin@alocanote.com";
@@ -176,14 +176,20 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void sincronizarSequencias() {
-        List<String> tabelas = List.of("RESERVATIONS", "TB_USER", "TB_NOTEBOOK", "LOCATIONS");
+        List<String> tabelas = List.of("reservations", "tb_user", "tb_notebook", "locations");
         for (String tabela : tabelas) {
             try {
-                jdbcTemplate.execute(
-                        "ALTER TABLE " + tabela + " ALTER COLUMN id RESTART WITH (SELECT COALESCE(MAX(id), 0) + 1 FROM " + tabela + ")"
+                Long nextId = jdbcTemplate.queryForObject(
+                        "SELECT COALESCE(MAX(id), 0) + 1 FROM " + tabela,
+                        Long.class
                 );
+                if (nextId != null) {
+                    jdbcTemplate.execute(
+                            "ALTER TABLE " + tabela + " ALTER COLUMN id RESTART WITH " + nextId
+                    );
+                }
             } catch (Exception e) {
-                // Silencia se a tabela ainda não existir ou banco for diferente de H2
+                // Silencia se a tabela ainda não existir ou não suportar RESTART WITH
             }
         }
         System.out.println("✅ Sequências de chaves primárias sincronizadas com sucesso.");
