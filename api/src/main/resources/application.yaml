@@ -1,25 +1,38 @@
 server:
-  port: 8082
+  port: ${PORT:8082}
 
 spring:
   application:
     name: api
 
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:./api/.env[.properties]
+      - optional:file:../.env[.properties]
+
   datasource:
-    url: jdbc:h2:file:./data/alocanotedb;AUTO_SERVER=TRUE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: ''
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://ep-plain-fire-b4c52row.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require}
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_USERNAME:neondb_owner}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 120000
+      max-lifetime: 240000
+      connection-timeout: 30000
 
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true
 
+  # O H2 pode ser desativado na nuvem, mas deixamos parametrizado
   h2:
     console:
-      enabled: true
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
 
   flyway:
@@ -42,4 +55,3 @@ firebase:
   credentials:
     path: ${FIREBASE_CREDENTIALS_PATH:}
     json: ${FIREBASE_CREDENTIALS_JSON:}
-
