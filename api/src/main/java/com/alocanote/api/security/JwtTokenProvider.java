@@ -22,7 +22,6 @@ public class JwtTokenProvider {
     @Value("${api.security.token.expiration:86400000}")
     private Long expiration;
 
-
     public String generateToken(User user) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
@@ -42,7 +41,6 @@ public class JwtTokenProvider {
         }
     }
 
-
     public String generateToken(UserDetails userDetails) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
@@ -56,7 +54,6 @@ public class JwtTokenProvider {
             throw new RuntimeException("Erro ao gerar token JWT", exception);
         }
     }
-
 
     public String generateToken(String subject) {
         try {
@@ -72,7 +69,6 @@ public class JwtTokenProvider {
         }
     }
 
-
     public String validateToken(String token) {
         if (token == null || token.isBlank()) {
             return null;
@@ -81,7 +77,7 @@ public class JwtTokenProvider {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)
                     .withIssuer(ISSUER)
-                    .acceptExpiresAt(315360000L)
+                    .acceptLeeway(60L)
                     .build()
                     .verify(token)
                     .getSubject();
@@ -90,11 +86,9 @@ public class JwtTokenProvider {
         }
     }
 
-
     public boolean isTokenValid(String token) {
         return validateToken(token) != null;
     }
-
 
     public String getSubject(String token) {
         return validateToken(token);
@@ -108,18 +102,13 @@ public class JwtTokenProvider {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             var claim = JWT.require(algorithm)
                     .withIssuer(ISSUER)
-                    .acceptExpiresAt(315360000L)
+                    .acceptLeeway(60L)
                     .build()
                     .verify(token)
                     .getClaim(claimName);
             return claim != null && !claim.isNull() ? claim.asString() : null;
         } catch (JWTVerificationException exception) {
-            try {
-                var decodedClaim = JWT.decode(token).getClaim(claimName);
-                return decodedClaim != null && !decodedClaim.isNull() ? decodedClaim.asString() : null;
-            } catch (Exception ignored) {
-                return null;
-            }
+            return null;
         }
     }
 

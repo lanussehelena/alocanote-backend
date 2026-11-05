@@ -57,6 +57,11 @@ public class UserService {
         String normalizedEmail = dto.email().trim().toLowerCase();
         String normalizedPhone = (dto.phone() != null && !dto.phone().isBlank()) ? dto.phone().trim() : null;
 
+        // No cadastro comum o usuário pode escolher entre PROJETISTA, CONFERENTE, CONSULTOR_VENDAS e OUTROS
+        if (dto.role() == Role.ADMINISTRADOR) {
+            throw new BusinessException("Não é permitido cadastrar-se como Administrador. Escolha entre PROJETISTA, CONFERENTE, CONSULTOR_VENDAS ou OUTROS.");
+        }
+
         if (userRepository.existsByEmail(normalizedEmail) || userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             User existing = userRepository.findByEmail(normalizedEmail)
                     .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail))
@@ -72,8 +77,13 @@ public class UserService {
                     existing.setPhone(normalizedPhone);
                 }
                 if (dto.role() != null) {
+                    if (dto.role() == Role.ADMINISTRADOR && existing.getRole() != Role.ADMINISTRADOR) {
+                        throw new BusinessException("Não é permitido cadastrar-se como Administrador. Escolha entre PROJETISTA, CONFERENTE, CONSULTOR_VENDAS ou OUTROS.");
+                    }
                     existing.setRole(dto.role());
-                    existing.setAccessLevel(dto.role() == Role.ADMINISTRADOR ? "ROLE_ADMIN" : "ROLE_USER");
+                    if (existing.getRole() != Role.ADMINISTRADOR) {
+                        existing.setAccessLevel("ROLE_USER");
+                    }
                 }
                 return userRepository.save(existing);
             }
@@ -94,7 +104,7 @@ public class UserService {
                 .phone(normalizedPhone)
                 .role(resolvedRole)
                 .customRole(dto.customRole())
-                .accessLevel(resolvedRole == Role.ADMINISTRADOR ? "ROLE_ADMIN" : "ROLE_USER")
+                .accessLevel("ROLE_USER")
                 .password(passwordEncoder.encode(dto.password()))
                 .authProvider("EMAIL")
                 .emailVerified(true)
@@ -140,9 +150,17 @@ public class UserService {
             existingUser.setProfilePictureUrl(dto.profilePictureUrl().trim());
         }
 
+        // Na edição do próprio perfil, pode escolher entre PROJETISTA, CONFERENTE, CONSULTOR_VENDAS e OUTROS
         if (dto.role() != null) {
+            if (dto.role() == Role.ADMINISTRADOR && existingUser.getRole() != Role.ADMINISTRADOR) {
+                throw new BusinessException("Não é permitido alterar seu perfil para Administrador. Escolha entre PROJETISTA, CONFERENTE, CONSULTOR_VENDAS ou OUTROS.");
+            }
             existingUser.setRole(dto.role());
-            existingUser.setAccessLevel(dto.role() == Role.ADMINISTRADOR ? "ROLE_ADMIN" : "ROLE_USER");
+            if (existingUser.getRole() == Role.ADMINISTRADOR) {
+                existingUser.setAccessLevel("ROLE_ADMIN");
+            } else {
+                existingUser.setAccessLevel("ROLE_USER");
+            }
         }
 
         if (dto.customRole() != null) {
@@ -287,7 +305,7 @@ public class UserService {
 
     private void validarPermissaoAdmin(String requesterEmail, String errorMessage) {
         if (requesterEmail == null || requesterEmail.isBlank() || userRepository == null) {
-            return;
+            throw new BusinessException(errorMessage);
         }
         String normalizedEmail = requesterEmail.trim().toLowerCase();
         if ("admin@alocanote.com".equalsIgnoreCase(normalizedEmail)) {
@@ -312,11 +330,6 @@ public class UserService {
                     .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail))
                     .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado."));
         }
-        List<User> allUsers = userRepository.findAll();
-        return allUsers.stream()
-                .filter(u -> u.getEmail() != null && !u.getEmail().equalsIgnoreCase("admin@alocanote.com"))
-                .reduce((first, second) -> second)
-                .or(() -> allUsers.stream().findFirst())
-                .orElseThrow(() -> new BusinessException("Usuário não autenticado."));
+        throw new BusinessException("Usuário não autenticado. Faça login novamente.");
     }
 }

@@ -9,6 +9,7 @@ import com.alocanote.api.service.ReservationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -46,6 +47,7 @@ public class ReservationController {
     }
 
     @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ReservationResponseDTO>> listarTodasReservas() {
         List<Reservation> reservas = reservationService.findAllReservations();
         List<ReservationResponseDTO> response = reservas.stream()
@@ -127,6 +129,7 @@ public class ReservationController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> excluirReserva(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
