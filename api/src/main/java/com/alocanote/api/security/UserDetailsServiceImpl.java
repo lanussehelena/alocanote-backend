@@ -1,6 +1,7 @@
 package com.alocanote.api.security;
 
 import com.alocanote.api.model.entity.User;
+import com.alocanote.api.model.enums.Role;
 import com.alocanote.api.repository.UserRepository;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -36,12 +37,20 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         User user = userRepository.findByEmail(normalizedEmail)
                 .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail))
                 .orElseGet(() -> {
-                    com.alocanote.api.model.enums.Role resolvedRole = com.alocanote.api.model.enums.Role.PROJETISTA;
+                    Role resolvedRole = Role.PROJETISTA;
                     if (roleClaim != null) {
                         try {
-                            resolvedRole = com.alocanote.api.model.enums.Role.valueOf(roleClaim);
+                            Role candidate = Role.valueOf(roleClaim);
+                            if (candidate != Role.ADMINISTRADOR || "admin@alocanote.com".equalsIgnoreCase(normalizedEmail)) {
+                                resolvedRole = candidate;
+                            }
                         } catch (IllegalArgumentException ignored) {
                         }
+                    }
+                    String resolvedAccessLevel = "ROLE_USER";
+                    if ("admin@alocanote.com".equalsIgnoreCase(normalizedEmail)) {
+                        resolvedAccessLevel = "ROLE_ADMIN";
+                        resolvedRole = Role.ADMINISTRADOR;
                     }
                     User recovered = User.builder()
                             .name(name != null && !name.isBlank() ? name : "Colaborador")
@@ -49,7 +58,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                             .phone(null)
                             .password("")
                             .role(resolvedRole)
-                            .accessLevel(accessLevelClaim != null && !accessLevelClaim.isBlank() ? accessLevelClaim : "ROLE_USER")
+                            .accessLevel(resolvedAccessLevel)
                             .build();
                     return userRepository.save(recovered);
                 });

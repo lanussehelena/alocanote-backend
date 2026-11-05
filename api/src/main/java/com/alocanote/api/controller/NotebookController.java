@@ -6,6 +6,7 @@ import com.alocanote.api.service.NotebookService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,7 @@ public class NotebookController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<NotebookResponseDTO> criarNotebook(
             @Valid @RequestBody CreateNotebookRequestDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -50,6 +52,7 @@ public class NotebookController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<NotebookResponseDTO> atualizarNotebook(
             @PathVariable Long id,
             @RequestBody CreateNotebookRequestDTO dto,
@@ -66,6 +69,7 @@ public class NotebookController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> excluirNotebook(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {

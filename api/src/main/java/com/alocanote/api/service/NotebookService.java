@@ -140,7 +140,7 @@ public class NotebookService {
 
     private void validarPermissaoAdmin(String requesterEmail, String errorMessage) {
         if (requesterEmail == null || requesterEmail.isBlank() || userRepository == null) {
-            return;
+            throw new BusinessException(errorMessage);
         }
         String normalizedEmail = requesterEmail.trim().toLowerCase();
         if ("admin@alocanote.com".equalsIgnoreCase(normalizedEmail)) {

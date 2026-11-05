@@ -239,7 +239,7 @@ public class ReservationService {
 
     @Transactional
     public void deleteReservation(Long reservationId, String requesterEmail) {
-        if (requesterEmail != null && !requesterEmail.isBlank() && !isAdministrador(requesterEmail)) {
+        if (requesterEmail == null || requesterEmail.isBlank() || !isAdministrador(requesterEmail)) {
             throw new BusinessException("Acesso negado: apenas o administrador pode excluir reservas.");
         }
 
@@ -261,17 +261,14 @@ public class ReservationService {
                     .or(() -> userRepository.findByEmailIgnoreCase(userEmail.trim()))
                     .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado."));
         }
-        List<User> allUsers = userRepository.findAll();
-        return allUsers.stream()
-                .filter(u -> u.getEmail() != null && !u.getEmail().equalsIgnoreCase("admin@alocanote.com"))
-                .reduce((first, second) -> second)
-                .or(() -> allUsers.stream().findFirst())
-                .orElseThrow(() -> new BusinessException("Usuário não autenticado. Faça login novamente."));
+        throw new BusinessException("Usuário não autenticado. Faça login novamente.");
     }
 
     private void validarPosseReserva(Reservation reservation, String userEmail) {
-        if (userEmail != null && !userEmail.isBlank()
-                && reservation.getUser() != null
+        if (userEmail == null || userEmail.isBlank()) {
+            throw new BusinessException("Usuário não autenticado. Faça login novamente.");
+        }
+        if (reservation.getUser() != null
                 && !reservation.getUser().getEmail().equalsIgnoreCase(userEmail.trim())) {
             if (!isAdministrador(userEmail)) {
                 throw new BusinessException("Acesso negado: esta reserva pertence a outro usuário.");

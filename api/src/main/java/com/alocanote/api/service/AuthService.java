@@ -99,12 +99,24 @@ public class AuthService {
 
     @Transactional
     public Optional<User> resolveUserFromFirebaseToken(String idToken) {
+        if (idToken == null || idToken.isBlank() || FirebaseApp.getApps().isEmpty()) {
+            return Optional.empty();
+        }
         try {
-            FirebaseAuthRequestDTO dto = new FirebaseAuthRequestDTO(idToken);
-            FirebaseTokenClaims claims = decodeTokenLenientForFilter(idToken);
+            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken.trim());
+            String provider = extractProviderFromFirebaseMap(decodedToken.getClaims());
+            FirebaseTokenClaims claims = new FirebaseTokenClaims(
+                    decodedToken.getUid(),
+                    decodedToken.getEmail(),
+                    decodedToken.getName(),
+                    decodedToken.getPicture(),
+                    decodedToken.isEmailVerified(),
+                    provider
+            );
             if (claims.email() == null || claims.email().isBlank()) {
                 return Optional.empty();
             }
+            FirebaseAuthRequestDTO dto = new FirebaseAuthRequestDTO(idToken);
             String normalizedEmail = claims.email().trim().toLowerCase();
             String resolvedName = resolveDisplayName(claims.name(), null, normalizedEmail);
             User user = findExistingUser(claims.uid(), normalizedEmail)
@@ -114,49 +126,6 @@ public class AuthService {
         } catch (Exception ex) {
             return Optional.empty();
         }
-    }
-
-    private FirebaseTokenClaims decodeTokenLenientForFilter(String idToken) {
-        if (!FirebaseApp.getApps().isEmpty()) {
-            try {
-                FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken.trim());
-                String provider = extractProviderFromFirebaseMap(decodedToken.getClaims());
-                return new FirebaseTokenClaims(
-                        decodedToken.getUid(),
-                        decodedToken.getEmail(),
-                        decodedToken.getName(),
-                        decodedToken.getPicture(),
-                        decodedToken.isEmailVerified(),
-                        provider
-                );
-            } catch (Exception ignored) {
-                // Fallback to JWT decode below
-            }
-        }
-        DecodedJWT jwt = JWT.decode(idToken.trim());
-        String uid = jwt.getSubject();
-        if (uid == null || uid.isBlank()) {
-            uid = getStringClaim(jwt, "user_id");
-        }
-        String email = getStringClaim(jwt, "email");
-        if ((email == null || email.isBlank()) && uid != null && uid.contains("@")) {
-            email = uid;
-        }
-        String name = getStringClaim(jwt, "name");
-        String picture = getStringClaim(jwt, "picture");
-        Claim emailVerifiedClaim = jwt.getClaim("email_verified");
-        boolean emailVerified = (emailVerifiedClaim != null && !emailVerifiedClaim.isNull())
-                ? Boolean.TRUE.equals(emailVerifiedClaim.asBoolean())
-                : true;
-        String provider = "FIREBASE_EMAIL";
-        Claim firebaseClaim = jwt.getClaim("firebase");
-        if (firebaseClaim != null && !firebaseClaim.isNull()) {
-            Map<String, Object> firebaseMap = firebaseClaim.asMap();
-            provider = extractProviderFromMap(firebaseMap);
-        } else if (jwt.getIssuer() != null && jwt.getIssuer().contains("accounts.google.com")) {
-            provider = "GOOGLE";
-        }
-        return new FirebaseTokenClaims(uid, email, name, picture, emailVerified, provider);
     }
 
     private Optional<User> findExistingUser(String firebaseUid, String normalizedEmail) {
@@ -204,12 +173,15 @@ public class AuthService {
             user.setPhone(resolvedPhone);
         }
 
-        if (request.role() != null) {
+        // Não permite auto-escalação para ADMINISTRADOR via payload social
+        if (request != null && request.role() != null && request.role() != Role.ADMINISTRADOR) {
             user.setRole(request.role());
-            user.setAccessLevel(request.role() == Role.ADMINISTRADOR ? "ROLE_ADMIN" : "ROLE_USER");
+            if (user.getRole() != Role.ADMINISTRADOR) {
+                user.setAccessLevel("ROLE_USER");
+            }
         }
 
-        if (request.customRole() != null && !request.customRole().isBlank()) {
+        if (request != null && request.customRole() != null && !request.customRole().isBlank()) {
             user.setCustomRole(request.customRole().trim());
         }
 
@@ -222,8 +194,12 @@ public class AuthService {
                                            String resolvedPicture,
                                            String resolvedPhone,
                                            FirebaseAuthRequestDTO request) {
-        Role userRole = request.role() != null ? request.role() : Role.PROJETISTA;
-        String accessLevel = (userRole == Role.ADMINISTRADOR) ? "ROLE_ADMIN" : "ROLE_USER";
+        // Usuário no fluxo social pode escolher entre PROJETISTA, CONFERENTE, CONSULTOR_VENDAS e OUTROS
+        Role userRole = Role.PROJETISTA;
+        if (request != null && request.role() != null && request.role() != Role.ADMINISTRADOR) {
+            userRole = request.role();
+        }
+        String accessLevel = "ROLE_USER";
 
         String phoneToSave = (resolvedPhone != null && !userRepository.existsByPhone(resolvedPhone))
                 ? resolvedPhone
@@ -239,7 +215,7 @@ public class AuthService {
                 .emailVerified(claims.emailVerified())
                 .profilePictureUrl(resolvedPicture != null ? resolvedPicture.trim() : null)
                 .role(userRole)
-                .customRole(request.customRole())
+                .customRole(request != null ? request.customRole() : null)
                 .accessLevel(accessLevel)
                 .build();
 

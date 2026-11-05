@@ -7,6 +7,7 @@ import com.alocanote.api.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,7 @@ public class UserController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserResponseDTO>> listarTodos() {
         List<UserResponseDTO> users = userService.findAllDTOs();
         return ResponseEntity.ok(users);
@@ -53,6 +55,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponseDTO> atualizarUsuario(
             @PathVariable Long id,
             @RequestBody UpdateUserProfileRequestDTO requestDTO,
@@ -67,6 +70,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> excluirUsuario(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
