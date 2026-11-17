@@ -19,7 +19,7 @@ public class JwtTokenProvider {
     @Value("${api.security.token.secret:alocanote-secret-key-default-change-in-production-2026}")
     private String secret;
 
-    @Value("${api.security.token.expiration:86400000}")
+    @Value("${api.security.token.expiration:2592000000}")
     private Long expiration;
 
     public String generateToken(User user) {
@@ -77,7 +77,7 @@ public class JwtTokenProvider {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)
                     .withIssuer(ISSUER)
-                    .acceptLeeway(60L)
+                    .acceptExpiresAt(2592000L)
                     .build()
                     .verify(token)
                     .getSubject();
@@ -102,7 +102,7 @@ public class JwtTokenProvider {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             var claim = JWT.require(algorithm)
                     .withIssuer(ISSUER)
-                    .acceptLeeway(60L)
+                    .acceptExpiresAt(2592000L)
                     .build()
                     .verify(token)
                     .getClaim(claimName);

@@ -48,7 +48,7 @@ api:
   security:
     token:
       secret: ${JWT_SECRET:alocanote-secret-key-default-change-in-production-2026}
-      expiration: 86400000
+      expiration: 2592000000
 
 firebase:
   project-id: ${FIREBASE_PROJECT_ID:}
