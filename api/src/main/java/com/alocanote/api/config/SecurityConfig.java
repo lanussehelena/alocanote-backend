@@ -42,7 +42,7 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/health").permitAll()
+                        .requestMatchers("/health", "/api/health").permitAll()
                         .requestMatchers("/api/auth/**", "/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/users/register", "/users/register", "/api/users", "/users").permitAll()
                         .anyRequest().authenticated()
@@ -63,14 +63,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
+        configuration.setAllowedOriginPatterns(List.of(
                 "https://alocanote.vercel.app",
-                "http://localhost:8081",
-                "http://localhost:19006"
+                "https://alocanote-*.vercel.app",
+                "http://localhost:*",
+                "http://127.0.0.1:*"
         ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization", "Content-Disposition", "Location"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
