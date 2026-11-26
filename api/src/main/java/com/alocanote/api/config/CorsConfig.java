@@ -10,13 +10,14 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins(
+                .allowedOriginPatterns(
                         "https://alocanote.vercel.app",
-                        "http://localhost:8081",
-                        "http://localhost:19006"
+                        "https://alocanote-*.vercel.app",
+                        "http://localhost:*",
+                        "http://127.0.0.1:*"
                 )
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
-                .allowedHeaders("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With")
+                .allowedHeaders("*")
                 .exposedHeaders("Authorization", "Content-Disposition", "Location")
                 .allowCredentials(true)
                 .maxAge(3600);
