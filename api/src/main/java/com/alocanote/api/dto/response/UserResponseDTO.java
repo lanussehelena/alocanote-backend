@@ -20,8 +20,30 @@ public record UserResponseDTO(
         String city,
         String state,
         String zipCode,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        Boolean emailVerified
 ) {
+    public UserResponseDTO(
+            Long id,
+            String name,
+            String email,
+            String phone,
+            Role role,
+            String customRole,
+            String accessLevel,
+            String profilePictureUrl,
+            String street,
+            String number,
+            String neighborhood,
+            String city,
+            String state,
+            String zipCode,
+            LocalDateTime createdAt
+    ) {
+        this(id, name, email, phone, role, customRole, accessLevel, profilePictureUrl,
+                street, number, neighborhood, city, state, zipCode, createdAt, null);
+    }
+
     public static UserResponseDTO fromEntity(User user) {
         if (user == null) return null;
         return new UserResponseDTO(
@@ -39,7 +61,8 @@ public record UserResponseDTO(
                 user.getCity(),
                 user.getState(),
                 user.getZipCode(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getEmailVerified()
         );
     }
 }

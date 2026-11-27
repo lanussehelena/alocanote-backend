@@ -69,7 +69,9 @@ public class UserService {
             if (existing != null && (existing.getPassword() == null || existing.getPassword().isBlank())) {
                 existing.setPassword(passwordEncoder.encode(dto.password()));
                 existing.setAuthProvider("EMAIL");
-                existing.setEmailVerified(true);
+                if (!Boolean.TRUE.equals(existing.getEmailVerified())) {
+                    existing.setEmailVerified(false);
+                }
                 if (dto.name() != null && !dto.name().isBlank()) {
                     existing.setName(dto.name().trim());
                 }
@@ -107,7 +109,7 @@ public class UserService {
                 .accessLevel("ROLE_USER")
                 .password(passwordEncoder.encode(dto.password()))
                 .authProvider("EMAIL")
-                .emailVerified(true)
+                .emailVerified(false)
                 .build();
 
         return userRepository.save(user);

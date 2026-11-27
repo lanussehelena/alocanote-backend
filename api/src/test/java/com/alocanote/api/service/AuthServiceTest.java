@@ -120,4 +120,23 @@ class AuthServiceTest {
                 authService.authenticateWithFirebase(new FirebaseAuthRequestDTO(expiredToken))
         );
     }
+
+    @Test
+    @DisplayName("Deve bloquear autenticação via Firebase quando o e-mail ainda não foi verificado")
+    void shouldRejectFirebaseLoginWhenEmailIsNotVerified() {
+        String unverifiedToken = JWT.create()
+                .withSubject("firebase-uid-unverified")
+                .withClaim("email", "pendente@alocanote.com")
+                .withClaim("name", "Colaborador Pendente")
+                .withClaim("email_verified", false)
+                .withExpiresAt(Instant.now().plusSeconds(3600))
+                .sign(Algorithm.HMAC256("test-secret"));
+
+        BusinessException exception = assertThrows(BusinessException.class, () ->
+                authService.authenticateWithFirebase(new FirebaseAuthRequestDTO(unverifiedToken))
+        );
+
+        assertEquals(AuthService.EMAIL_NOT_VERIFIED_MESSAGE, exception.getMessage());
+        verify(jwtTokenProvider, never()).generateToken(any(User.class));
+    }
 }

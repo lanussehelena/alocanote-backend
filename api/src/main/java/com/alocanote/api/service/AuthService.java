@@ -28,6 +28,9 @@ import java.util.Optional;
 @Service
 public class AuthService {
 
+    public static final String EMAIL_NOT_VERIFIED_MESSAGE =
+            "E-mail ainda não verificado. Verifique sua caixa de entrada e clique no link de confirmação antes de entrar.";
+
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
@@ -62,6 +65,11 @@ public class AuthService {
             throw new BusinessException("Senha incorreta. Tente novamente.");
         }
 
+        boolean isSeedAdmin = "admin@alocanote.com".equalsIgnoreCase(user.getEmail());
+        if (!isSeedAdmin && Boolean.FALSE.equals(user.getEmailVerified())) {
+            throw new BusinessException(EMAIL_NOT_VERIFIED_MESSAGE);
+        }
+
         return buildLoginResponse(user);
     }
 
@@ -72,6 +80,10 @@ public class AuthService {
         }
 
         FirebaseTokenClaims claims = verifyOrDecodeFirebaseToken(request);
+
+        if (!claims.emailVerified()) {
+            throw new BusinessException(EMAIL_NOT_VERIFIED_MESSAGE);
+        }
 
         String rawEmail = (claims.email() != null && !claims.email().isBlank())
                 ? claims.email()
@@ -104,6 +116,9 @@ public class AuthService {
         }
         try {
             FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken.trim());
+            if (!decodedToken.isEmailVerified()) {
+                return Optional.empty();
+            }
             String provider = extractProviderFromFirebaseMap(decodedToken.getClaims());
             FirebaseTokenClaims claims = new FirebaseTokenClaims(
                     decodedToken.getUid(),
@@ -263,9 +278,9 @@ public class AuthService {
             String picture = getStringClaim(jwt, "picture");
 
             Claim emailVerifiedClaim = jwt.getClaim("email_verified");
-            boolean emailVerified = (emailVerifiedClaim != null && !emailVerifiedClaim.isNull())
-                    ? Boolean.TRUE.equals(emailVerifiedClaim.asBoolean())
-                    : true;
+            boolean emailVerified = emailVerifiedClaim != null
+                    && !emailVerifiedClaim.isNull()
+                    && Boolean.TRUE.equals(emailVerifiedClaim.asBoolean());
 
             String provider = "FIREBASE_EMAIL";
             Claim firebaseClaim = jwt.getClaim("firebase");

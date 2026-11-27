@@ -62,6 +62,7 @@ class UserServiceTest {
         assertNotNull(response);
         assertEquals(Role.CONSULTOR_VENDAS, response.role());
         assertEquals("ROLE_USER", response.accessLevel());
+        assertEquals(Boolean.FALSE, response.emailVerified());
     }
 
     @Test

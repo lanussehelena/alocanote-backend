@@ -62,6 +62,11 @@ public class AuthController {
             throw new BusinessException("Senha incorreta. Tente novamente.");
         }
 
+        boolean isSeedAdmin = "admin@alocanote.com".equalsIgnoreCase(user.getEmail());
+        if (!isSeedAdmin && Boolean.FALSE.equals(user.getEmailVerified())) {
+            throw new BusinessException(AuthService.EMAIL_NOT_VERIFIED_MESSAGE);
+        }
+
         String token = jwtTokenProvider.generateToken(user);
 
         String userRole = (user.getRole() != null) ? user.getRole().name() : user.getAccessLevel();
