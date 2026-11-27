@@ -110,6 +110,29 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("Deve bloquear login quando o e-mail do usuário ainda não foi verificado")
+    void shouldRejectLoginWhenEmailIsNotVerified() {
+        String email = "nao.verificado@alocanote.com";
+        LoginRequestDTO request = new LoginRequestDTO(email, "123456");
+
+        User user = User.builder()
+                .id(2L)
+                .name("Usuário Novo")
+                .email(email)
+                .password("$2a$10$hash")
+                .role(Role.PROJETISTA)
+                .accessLevel("ROLE_USER")
+                .emailVerified(false)
+                .build();
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("123456", "$2a$10$hash")).thenReturn(true);
+
+        BusinessException exception = assertThrows(BusinessException.class, () -> authController.login(request));
+        assertEquals(AuthService.EMAIL_NOT_VERIFIED_MESSAGE, exception.getMessage());
+    }
+
+    @Test
     @DisplayName("Deve cadastrar novo usuário via POST /auth/register retornando HTTP 201")
     void shouldRegisterUserViaAuthController() {
         RegisterUserRequestDTO request = new RegisterUserRequestDTO(

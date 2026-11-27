@@ -123,6 +123,10 @@ public class DataInitializer implements CommandLineRunner {
                 admin.setAccessLevel("ROLE_ADMIN");
                 atualizado = true;
             }
+            if (!Boolean.TRUE.equals(admin.getEmailVerified())) {
+                admin.setEmailVerified(true);
+                atualizado = true;
+            }
             if (atualizado) {
                 userRepository.save(admin);
                 System.out.println("✅ Credenciais do usuário ADMINISTRADOR sincronizadas: " + adminEmail);
