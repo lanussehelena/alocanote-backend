@@ -1,8 +1,10 @@
 package com.alocanote.api.controller;
 
 import com.alocanote.api.dto.request.FirebaseAuthRequestDTO;
+import com.alocanote.api.dto.request.ForgotPasswordRequestDTO;
 import com.alocanote.api.dto.request.LoginRequestDTO;
 import com.alocanote.api.dto.request.RegisterUserRequestDTO;
+import com.alocanote.api.dto.request.ResetPasswordRequestDTO;
 import com.alocanote.api.dto.response.LoginResponseDTO;
 import com.alocanote.api.dto.response.UserResponseDTO;
 import com.alocanote.api.exception.BusinessException;
@@ -17,6 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping({"/api/auth", "/auth"})
@@ -92,6 +96,20 @@ public class AuthController {
     public ResponseEntity<LoginResponseDTO> authenticateWithFirebase(
             @Valid @RequestBody FirebaseAuthRequestDTO requestDTO) {
         LoginResponseDTO response = authService.authenticateWithFirebase(requestDTO);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequestDTO requestDTO) {
+        Map<String, String> response = authService.preparePasswordReset(requestDTO.email());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequestDTO requestDTO) {
+        Map<String, String> response = authService.syncResetPassword(requestDTO);
         return ResponseEntity.ok(response);
     }
 }

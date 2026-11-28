@@ -2,6 +2,7 @@ package com.alocanote.api.service;
 
 import com.alocanote.api.dto.request.FirebaseAuthRequestDTO;
 import com.alocanote.api.dto.request.LoginRequestDTO;
+import com.alocanote.api.dto.request.ResetPasswordRequestDTO;
 import com.alocanote.api.dto.response.LoginResponseDTO;
 import com.alocanote.api.exception.BusinessException;
 import com.alocanote.api.model.entity.User;
@@ -13,9 +14,11 @@ import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.AuthErrorCode;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
+import com.google.firebase.auth.UserRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -110,6 +113,98 @@ public class AuthService {
     }
 
     @Transactional
+    public Map<String, String> preparePasswordReset(String rawEmail) {
+        if (rawEmail == null || rawEmail.isBlank()) {
+            throw new BusinessException("Informe o e-mail cadastrado na sua conta.");
+        }
+
+        String normalizedEmail = rawEmail.trim().toLowerCase();
+        User user = userRepository.findByEmail(normalizedEmail)
+                .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail))
+                .orElseThrow(() -> new BusinessException("Nenhuma conta encontrada para este endereço de e-mail."));
+
+        ensureFirebaseUserExistsForPasswordReset(user);
+
+        return Map.of(
+                "message", "Conta localizada. Enviaremos as instruções para redefinir sua senha no e-mail informado.",
+                "email", user.getEmail()
+        );
+    }
+
+    @Transactional
+    public Map<String, String> syncResetPassword(ResetPasswordRequestDTO request) {
+        if (request == null || request.idToken() == null || request.idToken().isBlank()) {
+            throw new BusinessException("O token de autenticação do Firebase é obrigatório.");
+        }
+        if (request.newPassword() == null || request.newPassword().trim().length() < 6) {
+            throw new BusinessException("A nova senha deve ter pelo menos 6 caracteres.");
+        }
+
+        FirebaseTokenClaims claims = verifyOrDecodeFirebaseToken(new FirebaseAuthRequestDTO(request.idToken()));
+
+        if (claims.email() == null || claims.email().isBlank()) {
+            throw new BusinessException("Não foi possível identificar o e-mail no token do Firebase.");
+        }
+
+        String normalizedEmail = claims.email().trim().toLowerCase();
+        User user = findExistingUser(claims.uid(), normalizedEmail)
+                .orElseThrow(() -> new BusinessException("Nenhuma conta encontrada para sincronizar a nova senha."));
+
+        if (claims.uid() != null && !claims.uid().isBlank()
+                && (user.getFirebaseUid() == null || user.getFirebaseUid().isBlank())) {
+            user.setFirebaseUid(claims.uid());
+        }
+
+        if (claims.emailVerified()) {
+            user.setEmailVerified(true);
+        }
+
+        String encodedPassword = (passwordEncoder != null)
+                ? passwordEncoder.encode(request.newPassword().trim())
+                : request.newPassword().trim();
+        user.setPassword(encodedPassword);
+
+        userRepository.save(user);
+
+        return Map.of(
+                "message", "Nova senha sincronizada com sucesso.",
+                "email", user.getEmail()
+        );
+    }
+
+    private void ensureFirebaseUserExistsForPasswordReset(User user) {
+        if (FirebaseApp.getApps().isEmpty() || user.getEmail() == null || user.getEmail().isBlank()) {
+            return;
+        }
+        try {
+            UserRecord existingRecord = FirebaseAuth.getInstance().getUserByEmail(user.getEmail());
+            if ((user.getFirebaseUid() == null || user.getFirebaseUid().isBlank())
+                    && existingRecord.getUid() != null) {
+                user.setFirebaseUid(existingRecord.getUid());
+                userRepository.save(user);
+            }
+        } catch (FirebaseAuthException ex) {
+            if (ex.getAuthErrorCode() == AuthErrorCode.USER_NOT_FOUND) {
+                try {
+                    UserRecord.CreateRequest createRequest = new UserRecord.CreateRequest()
+                            .setEmail(user.getEmail())
+                            .setEmailVerified(Boolean.TRUE.equals(user.getEmailVerified()));
+                    if (user.getName() != null && !user.getName().isBlank()) {
+                        createRequest.setDisplayName(user.getName().trim());
+                    }
+                    UserRecord created = FirebaseAuth.getInstance().createUser(createRequest);
+                    user.setFirebaseUid(created.getUid());
+                    userRepository.save(user);
+                } catch (Exception ignored) {
+                    // Caso não seja possível provisionar no Firebase Admin, o cliente trata o envio
+                }
+            }
+        } catch (Exception ignored) {
+            // Não interrompe o fluxo caso o Firebase Admin esteja indisponível
+        }
+    }
+
+    @Transactional
     public Optional<User> resolveUserFromFirebaseToken(String idToken) {
         if (idToken == null || idToken.isBlank() || FirebaseApp.getApps().isEmpty()) {
             return Optional.empty();
@@ -200,6 +295,15 @@ public class AuthService {
             user.setCustomRole(request.customRole().trim());
         }
 
+        if (request != null && request.password() != null && !request.password().isBlank()
+                && passwordEncoder != null && !"GOOGLE".equalsIgnoreCase(claims.provider())) {
+            String rawPassword = request.password();
+            if (user.getPassword() == null || user.getPassword().isBlank()
+                    || !passwordEncoder.matches(rawPassword, user.getPassword())) {
+                user.setPassword(passwordEncoder.encode(rawPassword));
+            }
+        }
+
         return userRepository.save(user);
     }
 
@@ -220,11 +324,17 @@ public class AuthService {
                 ? resolvedPhone
                 : null;
 
+        String initialPassword = "";
+        if (request != null && request.password() != null && !request.password().isBlank()
+                && passwordEncoder != null && !"GOOGLE".equalsIgnoreCase(claims.provider())) {
+            initialPassword = passwordEncoder.encode(request.password());
+        }
+
         User newUser = User.builder()
                 .name(resolvedName)
                 .email(normalizedEmail)
                 .phone(phoneToSave)
-                .password("")
+                .password(initialPassword)
                 .firebaseUid(claims.uid())
                 .authProvider(claims.provider() != null ? claims.provider() : "FIREBASE_EMAIL")
                 .emailVerified(claims.emailVerified())

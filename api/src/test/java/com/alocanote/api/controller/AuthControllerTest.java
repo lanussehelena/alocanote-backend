@@ -1,7 +1,9 @@
 package com.alocanote.api.controller;
 
+import com.alocanote.api.dto.request.ForgotPasswordRequestDTO;
 import com.alocanote.api.dto.request.LoginRequestDTO;
 import com.alocanote.api.dto.request.RegisterUserRequestDTO;
+import com.alocanote.api.dto.request.ResetPasswordRequestDTO;
 import com.alocanote.api.dto.response.LoginResponseDTO;
 import com.alocanote.api.dto.response.UserResponseDTO;
 import com.alocanote.api.exception.BusinessException;
@@ -22,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -180,5 +183,43 @@ class AuthControllerTest {
         assertEquals("maria@gmail.com", response.getBody().email());
         assertEquals("Maria Google", response.getBody().name());
         verify(authService).authenticateWithFirebase(request);
+    }
+
+    @Test
+    @DisplayName("Deve preparar recuperação de senha via POST /auth/forgot-password")
+    void shouldPreparePasswordResetSuccessfully() {
+        ForgotPasswordRequestDTO request = new ForgotPasswordRequestDTO("maria@alocanote.com");
+        Map<String, String> expected = Map.of(
+                "message", "Conta localizada.",
+                "email", "maria@alocanote.com"
+        );
+
+        when(authService.preparePasswordReset("maria@alocanote.com")).thenReturn(expected);
+
+        ResponseEntity<Map<String, String>> response = authController.forgotPassword(request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("maria@alocanote.com", response.getBody().get("email"));
+        verify(authService).preparePasswordReset("maria@alocanote.com");
+    }
+
+    @Test
+    @DisplayName("Deve sincronizar nova senha via POST /auth/reset-password")
+    void shouldSyncResetPasswordSuccessfully() {
+        ResetPasswordRequestDTO request = new ResetPasswordRequestDTO("firebase.id.token", "novaSenha123");
+        Map<String, String> expected = Map.of(
+                "message", "Nova senha sincronizada com sucesso.",
+                "email", "maria@alocanote.com"
+        );
+
+        when(authService.syncResetPassword(request)).thenReturn(expected);
+
+        ResponseEntity<Map<String, String>> response = authController.resetPassword(request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("maria@alocanote.com", response.getBody().get("email"));
+        verify(authService).syncResetPassword(request);
     }
 }

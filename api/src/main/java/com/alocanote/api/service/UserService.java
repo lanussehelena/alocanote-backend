@@ -12,6 +12,9 @@ import com.alocanote.api.model.enums.ReservationStatus;
 import com.alocanote.api.model.enums.Role;
 import com.alocanote.api.repository.ReservationRepository;
 import com.alocanote.api.repository.UserRepository;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.UserRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -195,6 +198,7 @@ public class UserService {
             existingUser.setZipCode(dto.zipCode().trim());
         }
 
+        boolean passwordChanged = false;
         if (dto.newPassword() != null && !dto.newPassword().isBlank()) {
             if (existingUser.getPassword() != null && !existingUser.getPassword().isBlank()) {
                 if (dto.currentPassword() == null || dto.currentPassword().isBlank()) {
@@ -205,10 +209,34 @@ public class UserService {
                 }
             }
             existingUser.setPassword(passwordEncoder.encode(dto.newPassword()));
+            passwordChanged = true;
         }
 
         User saved = userRepository.save(existingUser);
+        if (passwordChanged) {
+            syncPasswordWithFirebaseAdmin(saved, dto.newPassword());
+        }
         return UserResponseDTO.fromEntity(saved);
+    }
+
+    private void syncPasswordWithFirebaseAdmin(User user, String newPassword) {
+        if (FirebaseApp.getApps().isEmpty() || newPassword == null || newPassword.isBlank()) {
+            return;
+        }
+        try {
+            String uid = user.getFirebaseUid();
+            if ((uid == null || uid.isBlank()) && user.getEmail() != null && !user.getEmail().isBlank()) {
+                UserRecord record = FirebaseAuth.getInstance().getUserByEmail(user.getEmail());
+                uid = record.getUid();
+            }
+            if (uid != null && !uid.isBlank()) {
+                FirebaseAuth.getInstance().updateUser(
+                        new UserRecord.UpdateRequest(uid).setPassword(newPassword)
+                );
+            }
+        } catch (Exception ignored) {
+            // Caso o usuário não esteja no Firebase ou Admin SDK indisponível, o cliente sincroniza
+        }
     }
 
     @Transactional(readOnly = true)
