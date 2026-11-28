@@ -1,6 +1,7 @@
 package com.alocanote.api.service;
 
 import com.alocanote.api.dto.request.FirebaseAuthRequestDTO;
+import com.alocanote.api.dto.request.ResetPasswordRequestDTO;
 import com.alocanote.api.dto.response.LoginResponseDTO;
 import com.alocanote.api.exception.BusinessException;
 import com.alocanote.api.model.entity.User;
@@ -138,5 +139,113 @@ class AuthServiceTest {
 
         assertEquals(AuthService.EMAIL_NOT_VERIFIED_MESSAGE, exception.getMessage());
         verify(jwtTokenProvider, never()).generateToken(any(User.class));
+    }
+
+    @Test
+    @DisplayName("Deve sincronizar senha no banco ao autenticar via Firebase com e-mail e senha")
+    void shouldSyncPasswordWhenAuthenticatingWithFirebaseEmail() {
+        String idToken = JWT.create()
+                .withSubject("firebase-uid-sync")
+                .withClaim("email", "sync@alocanote.com")
+                .withClaim("name", "Colaborador Sync")
+                .withClaim("email_verified", true)
+                .withClaim("firebase", Map.of("sign_in_provider", "password"))
+                .withExpiresAt(Instant.now().plusSeconds(3600))
+                .sign(Algorithm.HMAC256("test-secret"));
+
+        User existing = User.builder()
+                .id(8L)
+                .name("Colaborador Sync")
+                .email("sync@alocanote.com")
+                .password("$2a$10$senhaAntiga")
+                .role(Role.PROJETISTA)
+                .accessLevel("ROLE_USER")
+                .emailVerified(true)
+                .build();
+
+        FirebaseAuthRequestDTO request = new FirebaseAuthRequestDTO(
+                idToken, "Colaborador Sync", "sync@alocanote.com", null, null, null, null, "novaSenha123"
+        );
+
+        when(userRepository.findByFirebaseUid("firebase-uid-sync")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("sync@alocanote.com")).thenReturn(Optional.of(existing));
+        when(passwordEncoder.matches("novaSenha123", "$2a$10$senhaAntiga")).thenReturn(false);
+        when(passwordEncoder.encode("novaSenha123")).thenReturn("$2a$10$senhaNova");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(jwtTokenProvider.generateToken(existing)).thenReturn("jwt.sync.token");
+
+        LoginResponseDTO response = authService.authenticateWithFirebase(request);
+
+        assertEquals("jwt.sync.token", response.token());
+        assertEquals("$2a$10$senhaNova", existing.getPassword());
+        verify(passwordEncoder).encode("novaSenha123");
+    }
+
+    @Test
+    @DisplayName("Deve validar conta existente ao preparar recuperação de senha")
+    void shouldPreparePasswordResetForExistingUser() {
+        User existing = User.builder()
+                .id(9L)
+                .name("Maria")
+                .email("maria@alocanote.com")
+                .role(Role.PROJETISTA)
+                .accessLevel("ROLE_USER")
+                .build();
+
+        when(userRepository.findByEmail("maria@alocanote.com")).thenReturn(Optional.of(existing));
+
+        Map<String, String> result = authService.preparePasswordReset("  MARIA@alocanote.com ");
+
+        assertEquals("maria@alocanote.com", result.get("email"));
+        assertNotNull(result.get("message"));
+    }
+
+    @Test
+    @DisplayName("Deve lançar BusinessException ao solicitar recuperação para e-mail inexistente")
+    void shouldRejectForgotPasswordWhenEmailNotFound() {
+        when(userRepository.findByEmail("desconhecido@alocanote.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("desconhecido@alocanote.com")).thenReturn(Optional.empty());
+
+        BusinessException exception = assertThrows(BusinessException.class, () ->
+                authService.preparePasswordReset("desconhecido@alocanote.com")
+        );
+
+        assertTrue(exception.getMessage().contains("Nenhuma conta encontrada"));
+    }
+
+    @Test
+    @DisplayName("Deve sincronizar nova senha após redefinição usando token válido do Firebase")
+    void shouldSyncResetPasswordWithValidFirebaseToken() {
+        String idToken = JWT.create()
+                .withSubject("firebase-uid-reset")
+                .withClaim("email", "reset@alocanote.com")
+                .withClaim("email_verified", true)
+                .withExpiresAt(Instant.now().plusSeconds(3600))
+                .sign(Algorithm.HMAC256("test-secret"));
+
+        User existing = User.builder()
+                .id(12L)
+                .name("Colaborador Reset")
+                .email("reset@alocanote.com")
+                .password("$2a$10$antiga")
+                .role(Role.PROJETISTA)
+                .accessLevel("ROLE_USER")
+                .emailVerified(false)
+                .build();
+
+        when(userRepository.findByFirebaseUid("firebase-uid-reset")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("reset@alocanote.com")).thenReturn(Optional.of(existing));
+        when(passwordEncoder.encode("novaSenha456")).thenReturn("$2a$10$novaSenha456");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Map<String, String> result = authService.syncResetPassword(
+                new ResetPasswordRequestDTO(idToken, "novaSenha456")
+        );
+
+        assertEquals("reset@alocanote.com", result.get("email"));
+        assertEquals("$2a$10$novaSenha456", existing.getPassword());
+        assertEquals("firebase-uid-reset", existing.getFirebaseUid());
+        assertTrue(existing.getEmailVerified());
+        verify(userRepository).save(existing);
     }
 }

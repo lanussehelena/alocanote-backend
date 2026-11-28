@@ -20,9 +20,23 @@ public record FirebaseAuthRequestDTO(
 
         Role role,
 
-        String customRole
+        String customRole,
+
+        String password
 ) {
     public FirebaseAuthRequestDTO(String idToken) {
-        this(idToken, null, null, null, null, null, null);
+        this(idToken, null, null, null, null, null, null, null);
+    }
+
+    public FirebaseAuthRequestDTO(
+            String idToken,
+            String name,
+            String email,
+            String phone,
+            String profilePictureUrl,
+            Role role,
+            String customRole
+    ) {
+        this(idToken, name, email, phone, profilePictureUrl, role, customRole, null);
     }
 }
